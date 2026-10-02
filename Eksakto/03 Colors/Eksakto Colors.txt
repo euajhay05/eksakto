@@ -1,0 +1,13 @@
+EKSAKTO BRAND COLORS
+
+Eksakto Green   #1F6F47   RGB (31, 111, 71)   Eksakto green. Primary buttons (white text), links, ang tuldok sa logo sa light ground.
+Night           #13221A   RGB (19, 34, 26)   Dark sections at ang pricing card. Ground ng reverse logo.
+Founding Gold   #E8A33D   RGB (232, 163, 61)   Accent: Founding badge, ang tuldok sa reverse logo at app icon. Hindi pang text sa light ground.
+Ground          #F3F5F0   RGB (243, 245, 240)   Page background. Lahat ng page nagsisimula dito.
+Mint Tint       #E3EBDF   RGB (227, 235, 223)   Soft green fill: badges, selected options, highlight panels.
+Muted           #4F6357   RGB (79, 99, 87)   Secondary text, hints, captions sa ground o surface.
+Line            #DCE3D7   RGB (220, 227, 215)   Borders ng cards at dividers.
+White           #FFFFFF   RGB (255, 255, 255)   Cards, inputs at option rows sa ibabaw ng ground.
+Deep Green      #14502F   RGB (20, 80, 47)   Hover at pressed state ng brand buttons.
+Amber           #8A5A10   RGB (138, 90, 16)   Status text na kailangan ng pansin, halimbawa Editing.
+Clay            #B5532A   RGB (181, 83, 42)   Error messages sa forms.

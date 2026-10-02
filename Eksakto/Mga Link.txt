@@ -1,0 +1,11 @@
+EKSAKTO: MGA LINK
+
+Website (waitlist at survey):  https://eksakto.app
+Website code (GitHub):         https://github.com/euajhay05/eksakto
+Domain (Porkbun):              https://porkbun.com/account/domainsSpeedy
+Survey form (Google Forms):    https://docs.google.com/forms/d/197jiAOsJJ9akQvKbS3Nl_MAwKOoilfD_MxpiVhTbOMI/edit
+Brand system (Claude):         https://claude.ai/artifact/HrbyGRCY4b9tt9R1qNJPzB
+Landing page design (Claude):  https://claude.ai/artifact/PbSnzi9AswnoN5wG4zAaJD
+2027 Game Plan (Claude):       https://claude.ai/code/artifact/80d1bb6a-a3c0-4c50-9ad2-a357d52ec586
+
+Paalala sa fonts: i double click ang .ttf para ma install sa Mac. Pwede ring i upload sa Canva (Brand Kit > Fonts).
