@@ -18,7 +18,7 @@ body{margin:0;background:#F3F5F0;-webkit-font-smoothing:antialiased}
 a{color:#1F6F47}a:hover{color:#14502F}
 a.cta:hover{background:#14502F !important;color:#fff !important}
 @media (max-width:640px){
- nav a:not([target]){display:none}
+ nav a:not([data-survey]){display:none}
  section{padding-left:16px !important;padding-right:16px !important}
  header{padding-left:16px !important;padding-right:16px !important}
  .price{font-size:44px !important}
@@ -34,7 +34,7 @@ a.cta:hover{background:#14502F !important;color:#fff !important}
 <a href="#features" style="color: #13221A; text-decoration: none">Features</a>
 <a href="#presyo" style="color: #13221A; text-decoration: none">Presyo</a>
 <a href="#faq" style="color: #13221A; text-decoration: none">FAQ</a>
-<a href="https://docs.google.com/forms/d/e/1FAIpQLScQWVoo3uRTvzubknbQB4NVt94z4LJWwxGZIZq4yXi9sw_IeQ/viewform" target="_blank" rel="noopener" style="background: #13221A; color: #F3F5F0; text-decoration: none; padding: 12px 20px; border-radius: 999px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center">Sali sa waitlist</a>
+<a href="#survey" data-survey style="background: #13221A; color: #F3F5F0; text-decoration: none; padding: 12px 20px; border-radius: 999px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center">Sali sa waitlist</a>
 </nav>
 </header>
 
@@ -43,7 +43,7 @@ a.cta:hover{background:#14502F !important;color:#fff !important}
 <div style="align-self: flex-start; background: #E3EBDF; color: #1F4D33; font-size: 13px; font-weight: 700; padding: 8px 14px; border-radius: 999px; letter-spacing: 0.3px">Para sa videographers at photographers</div>
 <h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(40px, 9vw, 60px); line-height: 1.02; letter-spacing: -1.8px">Magkano ba talaga kinita mo this month?</h1>
 <p style="margin: 0; font-size: 19px; line-height: 1.6; color: #3E5246; max-width: 520px">Shoots, clients, bayad, gastos at contracts, isang app na lang. Isang bayad, sayo na forever.</p>
-<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center"><a class="cta" href="https://docs.google.com/forms/d/e/1FAIpQLScQWVoo3uRTvzubknbQB4NVt94z4LJWwxGZIZq4yXi9sw_IeQ/viewform" target="_blank" rel="noopener" style="min-height: 56px; padding: 0 28px; border-radius: 14px; background: #1F6F47; color: #FFFFFF; text-decoration: none; font-size: 17px; font-weight: 700; display: inline-flex; align-items: center">Sali na sa waitlist</a><span style="font-size: 14px; color: #4F6357">1 minutong survey lang</span></div>
+<div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center"><a class="cta" href="#survey" data-survey style="min-height: 56px; padding: 0 28px; border-radius: 14px; background: #1F6F47; color: #FFFFFF; text-decoration: none; font-size: 17px; font-weight: 700; display: inline-flex; align-items: center">Sali na sa waitlist</a><span style="font-size: 14px; color: #4F6357">2 minutes lang, promise</span></div>
 <div style="font-size: 14px; color: #4F6357">May founding price para sa first 100 lang. Walang monthly.</div>
 </div>
 
@@ -187,7 +187,7 @@ a.cta:hover{background:#14502F !important;color:#fff !important}
 <span>✓&#160; Gamit sa phone at laptop</span>
 <span>✓&#160; Name at logo mo sa contracts at SOA</span>
 </div>
-<a href="https://docs.google.com/forms/d/e/1FAIpQLScQWVoo3uRTvzubknbQB4NVt94z4LJWwxGZIZq4yXi9sw_IeQ/viewform" target="_blank" rel="noopener" style="background: #1F6F47; color: #FFFFFF; text-decoration: none; text-align: center; font-weight: 700; font-size: 17px; min-height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center">Sali na sa waitlist</a>
+<a href="#survey" data-survey style="background: #1F6F47; color: #FFFFFF; text-decoration: none; text-align: center; font-weight: 700; font-size: 17px; min-height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center">Sali na sa waitlist</a>
 </div>
 </section>
 
@@ -215,10 +215,156 @@ a.cta:hover{background:#14502F !important;color:#fff !important}
 <div style="max-width: 1180px; margin: 0 auto; padding: 40px 24px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; font-size: 14px">
 <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; color: #F3F5F0">eksakto<span style="color: #E8A33D">.</span></div>
 <span>Gawang Pinoy para sa Pinoy creatives</span>
-<a href="https://docs.google.com/forms/d/e/1FAIpQLScQWVoo3uRTvzubknbQB4NVt94z4LJWwxGZIZq4yXi9sw_IeQ/viewform" target="_blank" rel="noopener" style="color: #B7C7BB">Sali sa waitlist</a>
+<a href="#survey" data-survey style="color: #B7C7BB">Sali sa waitlist</a>
 </div>
 </footer>
 
 </div>
+<div id="sv" class="sv" role="dialog" aria-modal="true" aria-labelledby="sv-q" hidden>
+  <div class="sv-top">
+    <div class="sv-brand">eksakto<span>.</span></div>
+    <button type="button" class="sv-x" id="sv-close" aria-label="Isara">&times;</button>
+  </div>
+  <div class="sv-bar"><div class="sv-fill" id="sv-fill"></div></div>
+  <div class="sv-body">
+    <div class="sv-card" id="sv-card"></div>
+  </div>
+  <div class="sv-nav" id="sv-nav">
+    <button type="button" class="sv-back" id="sv-back">Balik</button>
+    <span class="sv-count" id="sv-count"></span>
+    <button type="button" class="sv-next" id="sv-next">Next</button>
+  </div>
+</div>
+<style>
+.sv{position:fixed;inset:0;z-index:100;background:#F3F5F0;color:#13221A;font-family:'Manrope',sans-serif;display:flex;flex-direction:column}
+.sv[hidden]{display:none}
+.sv-top{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;max-width:760px;width:100%;margin:0 auto;box-sizing:border-box}
+.sv-brand{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px;letter-spacing:-.4px}
+.sv-brand span{color:#1F6F47}
+.sv-x{width:44px;height:44px;border:none;background:#E3EBDF;border-radius:50%;font-size:26px;line-height:1;cursor:pointer;color:#13221A}
+.sv-bar{height:6px;background:#E3EBDF;max-width:712px;width:calc(100% - 48px);margin:0 auto;border-radius:99px;overflow:hidden}
+.sv-fill{height:100%;width:0;background:#1F6F47;border-radius:99px;transition:width .3s ease}
+.sv-body{flex:1;overflow-y:auto;display:flex;justify-content:center;padding:40px 24px 24px}
+.sv-card{width:100%;max-width:640px;display:flex;flex-direction:column;gap:20px;animation:svIn .28s ease}
+@keyframes svIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.sv-step{font-size:13px;font-weight:700;color:#1F6F47;letter-spacing:.4px}
+.sv-q{margin:0;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(26px,5.5vw,36px);line-height:1.12;letter-spacing:-.8px}
+.sv-hint{margin:-8px 0 0;font-size:15px;color:#4F6357}
+.sv-opts{display:flex;flex-direction:column;gap:10px}
+.sv-opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;min-height:56px;padding:14px 18px;box-sizing:border-box;background:#fff;border:1.5px solid #DCE3D7;border-radius:14px;font:600 16px 'Manrope',sans-serif;color:#13221A;cursor:pointer;transition:border-color .15s,background .15s}
+.sv-opt:hover{border-color:#1F6F47}
+.sv-opt[aria-checked="true"]{border-color:#1F6F47;background:#E3EBDF}
+.sv-opt[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+.sv-dot{flex:none;width:22px;height:22px;border:2px solid #A9BBAE;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.sv-opt.multi .sv-dot{border-radius:6px}
+.sv-opt[aria-checked="true"] .sv-dot{border-color:#1F6F47;background:#1F6F47}
+.sv-opt[aria-checked="true"] .sv-dot::after{content:"";width:8px;height:8px;background:#fff;border-radius:inherit}
+.sv-input,.sv-text{width:100%;box-sizing:border-box;padding:16px 18px;border:1.5px solid #C9D3C4;border-radius:14px;font:500 17px 'Manrope',sans-serif;color:#13221A;background:#fff}
+.sv-text{min-height:130px;resize:vertical}
+.sv-input:focus,.sv-text:focus,.sv-opt:focus-visible,.sv-next:focus-visible,.sv-back:focus-visible,.sv-x:focus-visible{outline:3px solid rgba(31,111,71,.35);outline-offset:2px}
+.sv-err{color:#B5532A;font-size:14px;font-weight:600;min-height:20px;margin:0}
+.sv-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px 24px;max-width:760px;width:100%;margin:0 auto;box-sizing:border-box}
+.sv-nav[hidden]{display:none}
+.sv-back{min-height:48px;padding:0 18px;border:none;background:none;font:700 15px 'Manrope',sans-serif;color:#4F6357;cursor:pointer}
+.sv-back[disabled]{visibility:hidden}
+.sv-count{font-size:13px;color:#5B6E62;font-weight:600}
+.sv-next{min-height:52px;padding:0 28px;border:none;border-radius:14px;background:#1F6F47;color:#fff;font:700 16px 'Manrope',sans-serif;cursor:pointer}
+.sv-next:hover{background:#14502F}
+.sv-next[disabled]{opacity:.6;cursor:wait}
+.sv-done{align-items:flex-start}
+.sv-big{font-size:56px;line-height:1}
+.sv-p{margin:0;font-size:17px;line-height:1.6;color:#3E5246}
+.sv-row{display:flex;gap:10px;flex-wrap:wrap}
+.sv-ghost{min-height:52px;padding:0 22px;border:1.5px solid #C9D3C4;border-radius:14px;background:#fff;font:700 16px 'Manrope',sans-serif;color:#13221A;cursor:pointer}
+body.sv-open{overflow:hidden}
+@media (max-width:640px){.sv-body{padding:28px 16px 16px}.sv-top,.sv-nav{padding-left:16px;padding-right:16px}.sv-bar{width:calc(100% - 32px)}}
+</style>
+<script>
+(function(){
+var FORM='https://docs.google.com/forms/d/e/1FAIpQLScQWVoo3uRTvzubknbQB4NVt94z4LJWwxGZIZq4yXi9sw_IeQ/formResponse';
+var Q=[
+ {id:1316684420,type:'multi',req:1,other:1,q:'Ano raket mo?',hint:'Pwede marami.',o:['Videographer','Photographer','Editor']},
+ {id:749320111,type:'one',req:1,q:'Ilang shoots o projects mo per month?',o:['1 hanggang 3 lang','4 hanggang 8','9 pataas, busy era']},
+ {id:1299603562,type:'one',req:1,q:'May kasama ka ba sa raket?',o:['Wala, solo flight','May isa akong partner o assistant','Team kami, 3 pataas']},
+ {id:1867669536,type:'one',req:1,q:'Saan mo nililista yung shoots at bayad mo ngayon?',o:['Sa notes ng phone','Excel o Google Sheets','May app ako','Sa utak lang, bahala na 😅']},
+ {id:741459195,type:'one',req:1,q:'Saan mo mas gagamitin yung app?',o:['Sa phone','Sa laptop','Pareho, palipat lipat']},
+ {id:2133253648,type:'multi',req:1,q:'Alin dito yung nangyari na sayo?',hint:'Pwede marami.',o:['Nakalimutan kong singilin yung client','Di ko alam magkano talaga kinita ko this month','Nadoble yung booking ko','Ang tagal gumawa ng quote o contract','Wala pa naman, chill lang ako']},
+ {id:142615255,type:'text',req:0,q:'Ano pinaka nakakainis sa pag handle ng raket mo?',hint:'Optional, pero sobrang laking tulong nito.',ph:'Kwento mo lang dito...'},
+ {id:362494494,type:'multi',req:1,max:3,q:'Kung may app na gagawa ng lahat ng yan, ano pinaka kailangan mo?',hint:'Pili ka ng hanggang 3.',o:['Singilan at tracking ng bayad','Schedule ng shoots','Kita at gastos per month','Mabilis na quote at contract','Tracking ng utang o loans','Goals at ipon','Gear ROI (bawi na ba yung camera mo?)','Sahod kung may full time job ka rin']},
+ {id:1144411382,type:'one',req:1,q:'One time bayad o monthly?',o:['One time, kahit medyo mahal','Monthly, basta mura','Kahit ano, basta sulit']},
+ {id:319401866,type:'one',req:0,q:'Kung one time mo lang babayaran, magkano sa tingin mo ang sulit?',o:['₱499 pababa','₱500 hanggang ₱999','₱1,000 hanggang ₱1,499','₱1,500 pataas','Depende, gusto ko muna makita']},
+ {id:421780727,type:'email',req:0,q:'Gusto mo bang mauna at makuha yung Founding price?',hint:'Drop mo email mo. Dito ka namin unang sasabihan pag launch na.',ph:'email@mo.com'},
+ {id:961108829,type:'multi',req:0,q:'Last na! Game ka bang mag beta test?',hint:'Mauuna kang makagamit at makakatulong ka sa pag ayos ng app.',o:['Game ako mag beta test at mag feedback']}
+];
+var A={},i=0,el=function(id){return document.getElementById(id)};
+var sv=el('sv'),card=el('sv-card'),nav=el('sv-nav'),back=el('sv-back'),next=el('sv-next'),lastFocus=null;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function open(){lastFocus=document.activeElement;sv.hidden=false;document.body.classList.add('sv-open');render();}
+function close(){sv.hidden=true;document.body.classList.remove('sv-open');if(lastFocus)lastFocus.focus();}
+function val(q){return A[q.id]}
+function render(){
+  var q=Q[i];el('sv-fill').style.width=((i)/Q.length*100)+'%';
+  nav.hidden=false;next.disabled=false;back.disabled=i===0;el('sv-count').textContent=(i+1)+' / '+Q.length;
+  next.textContent=i===Q.length-1?'Submit':'Next';
+  var h='<div class="sv-step">TANONG '+(i+1)+'</div><h2 class="sv-q" id="sv-q">'+esc(q.q)+'</h2>'+(q.hint?'<p class="sv-hint">'+esc(q.hint)+'</p>':'');
+  if(q.type==='one'||q.type==='multi'){
+    var v=val(q)||(q.type==='multi'?[]:null);
+    h+='<div class="sv-opts" role="'+(q.type==='one'?'radiogroup':'group')+'" aria-labelledby="sv-q">';
+    q.o.forEach(function(o,k){var on=q.type==='one'?v===o:v.indexOf(o)>-1;var dis=q.max&&!on&&v.length>=q.max;
+      h+='<button type="button" class="sv-opt'+(q.type==='multi'?' multi':'')+'" role="'+(q.type==='one'?'radio':'checkbox')+'" aria-checked="'+on+'"'+(dis?' aria-disabled="true"':'')+' data-k="'+k+'"><span class="sv-dot"></span><span>'+esc(o)+'</span></button>';});
+    h+='</div>';
+    if(q.other){var ot=A[q.id+'_o'];h+='<input class="sv-input" id="sv-other" type="text" placeholder="Iba pa? Type mo dito" value="'+esc(ot||'')+'" aria-label="Iba pang raket">';}
+  } else if(q.type==='text'){h+='<textarea class="sv-text" id="sv-in" placeholder="'+esc(q.ph)+'" aria-labelledby="sv-q">'+esc(val(q)||'')+'</textarea>';}
+  else {h+='<input class="sv-input" id="sv-in" type="email" inputmode="email" autocomplete="email" placeholder="'+esc(q.ph)+'" value="'+esc(val(q)||'')+'" aria-labelledby="sv-q">';}
+  h+='<p class="sv-err" id="sv-err" role="alert"></p>';
+  card.className='sv-card';card.innerHTML=h;void card.offsetWidth;
+  card.querySelectorAll('.sv-opt').forEach(function(b){b.onclick=function(){pick(q,+b.dataset.k)}});
+  var inp=el('sv-in');if(inp){inp.oninput=function(){A[q.id]=inp.value};setTimeout(function(){inp.focus()},50);}
+  var ot2=el('sv-other');if(ot2){ot2.oninput=function(){A[q.id+'_o']=ot2.value}}
+  if(!inp){var f=card.querySelector('.sv-opt');if(f)setTimeout(function(){f.focus()},50);}
+}
+function pick(q,k){
+  var o=q.o[k];
+  if(q.type==='one'){A[q.id]=o;render();setTimeout(go,260);return;}
+  var v=(A[q.id]||[]).slice(),p=v.indexOf(o);
+  if(p>-1)v.splice(p,1);else{if(q.max&&v.length>=q.max)return;v.push(o);}
+  A[q.id]=v;var f=k;render();var b=card.querySelector('[data-k="'+f+'"]');if(b)b.focus();
+}
+function ok(q){
+  var v=val(q),e='';
+  if(q.type==='multi'){var n=(v||[]).length+(q.other&&(A[q.id+'_o']||'').trim()?1:0);if(q.req&&!n)e='Pili ka muna kahit isa.';}
+  else if(q.type==='one'){if(q.req&&!v)e='Pili ka muna ng isa.';}
+  else if(q.type==='email'){v=(v||'').trim();A[q.id]=v;if(v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))e='Parang mali yung email, pa check.';}
+  if(e){el('sv-err').textContent=e;return false}return true;
+}
+function go(){var q=Q[i];if(!ok(q))return;if(i<Q.length-1){i++;render();}else submit();}
+function submit(){
+  var p=new URLSearchParams();
+  Q.forEach(function(q){var v=A[q.id];
+    if(q.type==='multi'){(v||[]).forEach(function(x){p.append('entry.'+q.id,x)});if(q.other){var t=(A[q.id+'_o']||'').trim();if(t){p.append('entry.'+q.id,'__other_option__');p.append('entry.'+q.id+'.other_option_response',t);}}}
+    else if(v)p.append('entry.'+q.id,v);
+  });
+  next.disabled=true;next.textContent='Sinesend...';
+  fetch(FORM,{method:'POST',mode:'no-cors',body:p}).then(done,function(){next.disabled=false;next.textContent='Submit';el('sv-err').textContent='May problema sa internet. Subukan ulit.';});
+}
+function done(){
+  el('sv-fill').style.width='100%';nav.hidden=true;var em=A[421780727];
+  card.className='sv-card sv-done';
+  card.innerHTML='<div class="sv-big">🙌</div><h2 class="sv-q" id="sv-q">'+(em?'Salamat! Nasa waitlist ka na.':'Salamat sa sagot!')+'</h2><p class="sv-p">'+(em?'Sasabihan ka namin sa '+esc(em)+' pag launch na, kasama ang Founding price para sa first 100.':'Malaking tulong to sa pag build ng Eksakto. Balik ka lang dito pag gusto mo nang sumali sa waitlist.')+'</p><p class="sv-p">May kakilala kang videographer o photographer? Share mo naman sa kanila 🙏</p><div class="sv-row"><button type="button" class="sv-next" id="sv-share">Share sa kakilala</button><button type="button" class="sv-ghost" id="sv-fin">Balik sa site</button></div>';
+  el('sv-fin').onclick=close;
+  el('sv-share').onclick=function(){var d={title:'Eksakto',text:'Tracker para sa Pinoy videographers at photographers. Sagot ka sa 2 minutes na survey:',url:'https://eksakto.app'};
+    if(navigator.share){navigator.share(d).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(d.url).then(function(){el('sv-share').textContent='Na copy na ang link!'})}};
+  el('sv-share').focus();
+  A={};i=0;
+}
+back.onclick=function(){if(i>0){i--;render();}};
+next.onclick=go;
+el('sv-close').onclick=close;
+document.addEventListener('keydown',function(e){if(sv.hidden)return;if(e.key==='Escape')close();if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='BUTTON'&&!nav.hidden){e.preventDefault();go();}});
+document.querySelectorAll('a[data-survey]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();open();})});
+if(location.hash==='#survey')open();
+})();
+</script>
+
 </body>
 </html>
