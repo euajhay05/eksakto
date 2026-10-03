@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="tl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bilhin ang Eksakto</title>
+<meta name="description" content="Isang bayad, sayo na forever. Bayaran via GCash at matatanggap mo ang license key sa email.">
+<meta name="theme-color" content="#13221A">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='eksakto icon'%3E%3Crect width='1024' height='1024' rx='232' fill='%2313221A'/%3E%3Cg transform='translate%28145.2 749.6%29 scale%280.9 -0.9%29'%3E%3Cpath fill='%23F3F5F0' d='M313 -14Q247 -14 195.0 3.5Q143 21 106.5 55.0Q70 89 51.0 139.0Q32 189 32 254Q32 317 50.5 370.0Q69 423 103.5 461.5Q138 500 188.5 521.0Q239 542 302 542Q366 542 414.5 521.5Q463 501 494.5 461.0Q526 421 541.0 363.5Q556 306 551 232L187 229Q192 168 222 138Q257 101 312 101Q339 101 357.0 108.5Q375 116 386.5 127.5Q398 139 404.5 153.0Q411 167 415 180L555 150Q547 113 529.5 83.0Q512 53 482.5 31.0Q453 9 411.5 -2.5Q370 -14 313 -14ZM191 313 404 315Q404 340 396 359Q383 390 358.0 404.5Q333 419 304 419Q269 419 242.5 400.0Q216 381 201 345Q195 331 191 313Z'/%3E%3Cpath fill='%23E8A33D' transform='translate%28553 0%29' d='M125 -13Q73 -13 47.5 9.0Q22 31 22 77Q22 124 47.5 146.0Q73 168 125 168Q178 168 204.0 146.0Q230 124 230 77Q230 -13 125 -13Z'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--ground:#F3F5F0;--surface:#fff;--ink:#13221A;--muted:#4F6357;--line:#DCE3D7;--tint:#E3EBDF;--brand:#1F6F47;--brandDeep:#14502F;--gold:#E8A33D;--danger:#B3261E}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ground);color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--brand)}
+.wrap{max-width:560px;margin:0 auto;padding:22px 16px 64px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.logo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:24px;letter-spacing:-.5px;color:var(--ink);text-decoration:none}
+.logo span{color:var(--brand)}
+.back{font-size:14px;font-weight:600;text-decoration:none;color:var(--muted)}
+h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(32px,8vw,44px);line-height:1.05;letter-spacing:-1.2px;margin:0 0 10px}
+.lead{font-size:16px;line-height:1.6;color:var(--muted);margin:0 0 24px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:14px}
+.price-row{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.price{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:44px;letter-spacing:-1px}
+.price-old{font-size:18px;color:var(--muted);text-decoration:line-through}
+.badge{display:inline-block;background:var(--tint);color:var(--brandDeep);font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:999px}
+.badge.gold{background:#FBF1E1;color:#8A5A12}
+.perks{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px;font-size:14.5px}
+.perks li::before{content:"✓";color:var(--brand);font-weight:700;margin-right:8px}
+.step{display:flex;gap:12px;align-items:flex-start}
+.num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.step h2{font-size:16px;margin:3px 0 6px}
+.step p{margin:0;font-size:14px;color:var(--muted);line-height:1.55}
+label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
+input{width:100%;min-height:48px;border:1px solid var(--line);border-radius:12px;padding:0 14px;font:inherit;font-size:16px;background:#fff;color:var(--ink)}
+input:focus{outline:3px solid rgba(31,111,71,.25);border-color:var(--brand)}
+.code-row{display:flex;gap:8px}
+.code-row input{text-transform:uppercase;letter-spacing:1px}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;min-height:52px;padding:0 20px;border-radius:14px;background:var(--brand);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;width:100%;margin-top:18px}
+.btn:hover{background:var(--brandDeep)}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn-ghost{all:unset;box-sizing:border-box;cursor:pointer;min-height:48px;padding:0 16px;border-radius:12px;border:1px solid var(--line);font-weight:600;font-size:14px;display:flex;align-items:center;flex:none}
+.hint{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5}
+.msg{font-size:13.5px;margin-top:8px;font-weight:600}
+.msg.ok{color:var(--brand)}.msg.err{color:var(--danger)}
+.qr{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.qr img{width:210px;max-width:100%;height:auto;border-radius:12px;border:1px solid var(--line);background:#fff;padding:8px}
+.qr .amt{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:30px}
+.note{background:var(--tint);border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.5;margin-top:12px}
+.done{text-align:center;padding:32px 20px}
+.done .big{font-size:44px}
+.closed{text-align:center}
+[hidden]{display:none !important}
+footer{text-align:center;font-size:13px;color:var(--muted);margin-top:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="/">eksakto<span>.</span></a><a class="back" href="/">Bumalik sa site</a></header>
+
+  <div id="loading" class="card">Sandali lang...</div>
+
+  <div id="closed" hidden>
+    <h1>Malapit na.</h1>
+    <p class="lead">Bubuksan ang bilihan sa October 28. Sali muna sa waitlist para mauna ka at makuha ang founding price.</p>
+    <a class="btn" href="/#survey" style="text-decoration:none">Sali sa waitlist</a>
+  </div>
+
+  <div id="shop" hidden>
+    <h1>Isang bayad,<br>sayo na forever.</h1>
+    <p class="lead">Walang monthly. Bayaran via GCash at matatanggap mo ang license key sa email mo.</p>
+
+    <div class="card">
+      <div class="price-row"><span class="price" id="price">₱699</span><span class="price-old" id="price-old" hidden>₱699</span><span class="badge gold" id="founding-badge" hidden>Founding price</span></div>
+      <div class="hint" id="slots"></div>
+      <ul class="perks">
+        <li>Lahat ng features, walang limit</li>
+        <li>Libreng updates habang buhay</li>
+        <li>Gamit sa phone at laptop</li>
+        <li>Pangalan at logo mo sa contracts at SOA</li>
+      </ul>
+    </div>
+
+    <form id="form" class="card" novalidate>
+      <div class="step"><span class="num">1</span><div style="flex:1">
+        <h2>May founding code ka?</h2>
+        <p>Pinadala namin ito sa email ng mga nasa waitlist. Kung wala, laktawan mo lang.</p>
+        <div class="code-row" style="margin-top:10px"><input id="code" placeholder="WAITXXXXX" autocomplete="off" aria-label="Founding code"><button type="button" class="btn-ghost" id="code-btn">Gamitin</button></div>
+        <div class="msg" id="code-msg" role="status"></div>
+      </div></div>
+
+      <hr style="border:0;border-top:1px solid var(--line);margin:20px 0">
+
+      <div class="step"><span class="num">2</span><div style="flex:1">
+        <h2>Magbayad sa GCash</h2>
+        <p>I scan ang QR gamit ang GCash, Maya o kahit anong bank app. Eksakto ang halaga para mabilis ma check.</p>
+        <div class="qr"><img src="gcash-qr.png" alt="GCash QR ng Eksakto" onerror="this.hidden=true"><div><div class="amt" id="pay-amt">₱699</div><div class="hint" id="gcash-number"></div></div></div>
+        <div class="note">Ang lalabas na pangalan ay <b id="gcash-name">JO*N P** N.</b> Si John Pol N. yan, ang gumawa ng Eksakto.</div>
+      </div></div>
+
+      <hr style="border:0;border-top:1px solid var(--line);margin:20px 0">
+
+      <div class="step"><span class="num">3</span><div style="flex:1">
+        <h2>Ilagay ang detalye mo</h2>
+        <p>Dito namin ipapadala ang license key mo.</p>
+        <label for="name">Pangalan</label><input id="name" autocomplete="name" placeholder="e.g. Juan Reyes" required>
+        <label for="email">Email</label><input id="email" type="email" autocomplete="email" placeholder="e.g. juan@gmail.com" required>
+        <label for="ref">GCash reference number</label><input id="ref" inputmode="numeric" autocomplete="off" placeholder="13 digits galing sa receipt" required>
+        <div class="hint">Makikita ito sa ibaba ng GCash receipt pagkatapos mong magbayad.</div>
+      </div></div>
+
+      <button class="btn" type="submit" id="submit">Isumite ang bayad</button>
+      <div class="msg err" id="form-msg" role="alert"></div>
+    </form>
+  </div>
+
+  <div id="done" class="card done" hidden>
+    <div class="big">🎉</div>
+    <h1 style="font-size:30px">Natanggap namin!</h1>
+    <p class="lead" style="margin-bottom:0">Iche check namin ang bayad mo at ipapadala ang license key sa <b id="done-email"></b>, kadalasan sa loob ng ilang oras. Kung wala pa sa loob ng 24 oras, tingnan ang Spam o mag email sa <a href="mailto:hello@eksakto.app">hello@eksakto.app</a>.</p>
+  </div>
+
+  <footer>May tanong? <a href="mailto:hello@eksakto.app">hello@eksakto.app</a></footer>
+</div>
+
+<script>
+(function(){
+  var SB = 'https://edngzvnyajxudvbzmalg.supabase.co';
+  var KEY = 'sb_publishable_N3xc7VenyA933795z5Jsdw_Ud9pXhdf';
+  var GCASH = { name: 'JO*N P** N.', number: '' }; // number shown under the QR, optional
+  function rpc(fn, body){
+    return fetch(SB + '/rest/v1/rpc/' + fn, { method:'POST', headers:{ apikey:KEY, 'Content-Type':'application/json' }, body: JSON.stringify(body || {}) })
+      .then(function(r){ return r.json(); });
+  }
+  var $ = function(id){ return document.getElementById(id); };
+  var peso = function(n){ return '₱' + Number(n).toLocaleString('en-PH'); };
+  var info = null, codeOk = false, appliedCode = '';
+
+  $('gcash-name').textContent = GCASH.name;
+  if (GCASH.number) $('gcash-number').textContent = 'GCash: ' + GCASH.number;
+
+  function setPrice(amount){
+    $('price').textContent = peso(amount);
+    $('pay-amt').textContent = peso(amount);
+    var f = amount < info.regular;
+    $('price-old').hidden = !f; $('price-old').textContent = peso(info.regular);
+    $('founding-badge').hidden = !f;
+  }
+
+  var pre = new URLSearchParams(location.search).get('code');
+  if (pre) $('code').value = pre.toUpperCase();
+
+  rpc('shop_info').then(function(d){
+    info = d; $('loading').hidden = true;
+    if (!d.open) { $('closed').hidden = false; return; }
+    $('shop').hidden = false;
+    setPrice(d.regular);
+    $('slots').textContent = d.founding_left > 0 ? d.founding_left + ' na lang ang founding slots para sa waitlist.' : '';
+    if (pre) checkCode();
+  }).catch(function(){
+    $('loading').textContent = 'Hindi ma load. Check ang internet mo at i refresh.';
+  });
+
+  function checkCode(){
+    var c = $('code').value.trim().toUpperCase();
+    if (!c) { codeOk = false; appliedCode = ''; $('code-msg').textContent = ''; setPrice(info.regular); return; }
+    $('code-msg').className = 'msg'; $('code-msg').textContent = 'Chine check...';
+    rpc('check_code', { p_code: c }).then(function(r){
+      codeOk = !!r.ok; appliedCode = r.ok ? c : '';
+      var why = { not_found:'Hindi namin mahanap ang code na yan.', used:'Nagamit na ang code na yan.', sold_out:'Ubos na ang founding slots, sorry!' };
+      $('code-msg').className = 'msg ' + (r.ok ? 'ok' : 'err');
+      $('code-msg').textContent = r.ok ? 'Ayos! ' + peso(r.amount) + ' na lang ang babayaran mo.' : (why[r.reason] || 'Hindi gumana ang code.');
+      setPrice(r.amount);
+    });
+  }
+  $('code-btn').addEventListener('click', checkCode);
+  $('code').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); checkCode(); } });
+  $('code').addEventListener('input', function(){ if (codeOk) { codeOk = false; appliedCode = ''; setPrice(info.regular); $('code-msg').textContent = 'Pindutin ulit ang Gamitin.'; $('code-msg').className = 'msg'; } });
+
+  $('form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var name = $('name').value.trim(), email = $('email').value.trim(), ref = $('ref').value.replace(/\s/g,'');
+    var m = $('form-msg'); m.textContent = '';
+    if (!name) { m.textContent = 'Ilagay ang pangalan mo.'; return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { m.textContent = 'Mukhang mali ang email. Pakicheck.'; return; }
+    if (ref.length < 6) { m.textContent = 'Ilagay ang GCash reference number galing sa receipt.'; return; }
+    if ($('code').value.trim() && !codeOk) { m.textContent = 'Pindutin muna ang Gamitin para ma check ang code, o burahin ito.'; return; }
+    var b = $('submit'); b.disabled = true; b.textContent = 'Isinusumite...';
+    rpc('submit_order', { p_name:name, p_email:email, p_ref:ref, p_code: appliedCode || null }).then(function(r){
+      if (r.ok) { $('shop').hidden = true; $('done').hidden = false; $('done-email').textContent = email; window.scrollTo(0,0); return; }
+      var why = { closed:'Sarado pa ang bilihan.', invalid:'May kulang o mali sa detalye. Pakicheck.', duplicate_ref:'Nagamit na ang reference number na yan. Kung sigurado kang tama, mag email sa hello@eksakto.app.', too_many:'Masyadong maraming subok. Subukan ulit mamaya.', code_invalid:'Hindi na valid ang code. Burahin ito para ' + peso(info.regular) + ' ang babayaran.' };
+      m.textContent = why[r.reason] || 'May mali. Subukan ulit.';
+      b.disabled = false; b.textContent = 'Isumite ang bayad';
+    }).catch(function(){ m.textContent = 'Hindi ma send. Check ang internet mo at subukan ulit.'; b.disabled = false; b.textContent = 'Isumite ang bayad'; });
+  });
+})();
+</script>
+</body>
+</html>
