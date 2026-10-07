@@ -124,8 +124,8 @@
   .kanban-col-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:0 4px}
   .shoot-card{background:var(--card);border:1px solid oklch(0 0 0 / 0.06);border-radius:11px;padding:13px;cursor:grab}
 
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-  .cal-cell{aspect-ratio:1;border-radius:9px;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;cursor:pointer}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+  .cal-cell{min-width:0;overflow:hidden;aspect-ratio:1;border-radius:9px;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;cursor:pointer}
 
   select{appearance:none;-webkit-appearance:none}
   input::placeholder{color:oklch(0.55 0.015 150)}
@@ -224,6 +224,7 @@
   .tb-results b{display:block;font-size:14px}.tb-results small{font-size:12px;color:var(--mut)}
   .tr-kind{font-size:11px;font-weight:700;color:var(--accent1);background:var(--tint);padding:3px 7px;border-radius:6px;flex:none}
   .tb-icon{all:unset;cursor:pointer;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#6B7A70}
+  .tb-icon:has(span){width:auto;padding:0 14px;gap:8px;font-size:14px;font-weight:600;border:1px solid var(--border)}
   .tb-icon:hover,.tb-icon.on{background:var(--ground);color:var(--ink)}
   /* dock */
   .dock{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:80;display:flex;gap:4px;padding:7px;border-radius:22px;background:rgba(255,255,255,.88);backdrop-filter:blur(18px);box-shadow:0 12px 44px rgba(19,34,26,.16),0 0 0 1px var(--border)}
@@ -241,8 +242,8 @@
   .qa-menu .ico{color:var(--accent1)}
   .dk:focus-visible,.dk-add:focus-visible,.tb-icon:focus-visible,.tb-biz:focus-visible{outline:3px solid rgba(31,111,71,.35);outline-offset:2px}
   /* segmented tabs */
-  .seg-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:12px;background:var(--ground);border:1px solid var(--border);margin:6px 0 18px}
-  .seg-tabs button{all:unset;cursor:pointer;padding:7px 14px;border-radius:9px;font-size:13.5px;font-weight:600;color:#5E6C63}
+  .seg-tabs{max-width:100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;display:inline-flex;gap:2px;padding:4px;border-radius:12px;background:var(--ground);border:1px solid var(--border);margin:6px 0 18px}
+  .seg-tabs button{all:unset;flex:none;white-space:nowrap;cursor:pointer;padding:7px 14px;border-radius:9px;font-size:13.5px;font-weight:600;color:#5E6C63}
   .seg-tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(19,34,26,.12)}
   .mobile-topbar,.sidebar,.sidebar-backdrop{display:none !important}
   @media (max-width:760px){
@@ -549,7 +550,7 @@
 </head>
 <body>
 <div id="app"></div>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 </body>
 </html>
