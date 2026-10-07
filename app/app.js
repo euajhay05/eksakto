@@ -39,6 +39,7 @@
     video: '<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/>',
     camera: '<path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
     more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
   };
   function icon(name, size) {
@@ -109,7 +110,8 @@
       tplQuotation: 'Thank you for the opportunity to work with you. Below is our proposed scope of work and pricing for {project}.',
       tplInvoice: 'Statement of account for {client} for "{project}", dated {date}. Amount due: {amount}.',
       yearlyGoal: 0,
-      features: { gear: true, loans: false, goals: false, salary: false },
+      features: { gear: true, loans: false, goals: false, salary: false, clients: true, expenses: true, docs: true, insights: true },
+      checklistHidden: false,
       onboarded: false,
     };
   }
@@ -207,7 +209,7 @@
   }
   function formatInvoiceNumber(n, kind) {
     const prefix = kind === 'invoice' ? 'INV' : 'SOA';
-    return `${prefix}-${TODAY_STR.slice(0, 4)}-${String(n).padStart(3, '0')}`;
+    return `${prefix} ${TODAY_STR.slice(0, 4)} ${String(n).padStart(3, '0')}`;
   }
   // Cross-device numbering: derive the next sequence number from the synced documents
   // themselves (highest existing "-NNN" suffix + 1) so it never restarts at 1 on a new
@@ -215,7 +217,7 @@
   function deriveInvoiceCounter(documents) {
     let max = 0;
     (documents || []).forEach(r => {
-      const m = /-(\d+)\s*$/.exec((r && r.draft && r.draft.invoiceNumber) || '');
+      const m = /[-\s](\d+)\s*$/.exec((r && r.draft && r.draft.invoiceNumber) || '');
       if (m) max = Math.max(max, Number(m[1]) || 0);
     });
     return max + 1;
@@ -251,13 +253,11 @@
   // "Package fee - ₱10,000") into { label, amount } rows for the itemized invoice table.
   // Used by both the on-screen preview and the generated PDF so they stay in sync.
   function parseLineItems(str) {
+    // "Label: ₱10,000" (or the older "Label - ₱10,000") puts the amount in its own column.
     return String(str || '').split('\n').map(s => s.trim()).filter(Boolean).map(line => {
-      const idx = line.lastIndexOf(' - ');
-      const label = idx === -1 ? line : line.slice(0, idx).trim();
-      const tail = idx === -1 ? '' : line.slice(idx + 3).trim();
-      const cleaned = tail.replace(/PHP/gi, '').replace(/₱/g, '').replace(/\$/g, '').replace(/,/g, '').trim();
-      const amount = cleaned && !isNaN(Number(cleaned)) ? Number(cleaned) : null;
-      return { label, amount };
+      const m = line.match(/^(.*?)(?:\s+-\s+|\s*:\s*)(?:PHP|₱|\$)?\s*([\d,]+(?:\.\d+)?)\s*(?:PHP)?$/i);
+      if (!m) return { label: line, amount: null };
+      return { label: m[1].trim(), amount: Number(m[2].replace(/,/g, '')) };
     });
   }
   // Strips anything that isn't a digit or decimal point from a money input's raw typed value
@@ -292,7 +292,7 @@
     return formatted.length;
   }
   function fmtDateLong(dstr) {
-    if (!dstr) return '—';
+    if (!dstr) return '';
     const dt = new Date(dstr + 'T00:00:00');
     return isNaN(dt) ? dstr : dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   }
@@ -302,7 +302,7 @@
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
   function fmtDateShortYear(dstr) {
-    if (!dstr) return '—';
+    if (!dstr) return '';
     const d = new Date(dstr + 'T00:00:00');
     return isNaN(d) ? dstr : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
@@ -1104,7 +1104,7 @@
       analysisText = `You're spending more today (${fmtMoney(todayTotal)}) compared to your average of ${fmtMoney(Math.round(avgDaily))}/day this month.`;
       analysisColor = 'oklch(0.62 0.17 45)';
     } else if (todayTotal > 0 && todayTotal < avgDaily * 0.7) {
-      analysisText = `You're spending less today — only ${fmtMoney(todayTotal)} compared to your average of ${fmtMoney(Math.round(avgDaily))}/day.`;
+      analysisText = `You're spending less today, only ${fmtMoney(todayTotal)} compared to your average of ${fmtMoney(Math.round(avgDaily))}/day.`;
       analysisColor = 'oklch(0.5 0.15 150)';
     } else {
       analysisText = `Your spending today is in the normal range (${fmtMoney(todayTotal)} vs ${fmtMoney(Math.round(avgDaily))}/day average).`;
@@ -1113,7 +1113,7 @@
     const decorateExpense = (e) => ({ ...e, dateLabel: fmtDate(e.date), amountLabel: fmtMoney(e.amount) });
     const recentExpenses = expenses.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4).map(decorateExpense);
     const allExpenseRows = expenses.slice().sort((a, b) => b.date.localeCompare(a.date)).map(decorateExpense);
-    const lastExp = expenses.slice().sort((a, b) => b.date.localeCompare(a.date))[0] || { description: '—', amount: 0 };
+    const lastExp = expenses.slice().sort((a, b) => b.date.localeCompare(a.date))[0] || { description: '', amount: 0 };
 
     const expensesMonthKey = state.expensesMonthKey || THIS_MONTH_KEY;
     const expensesMonthLabel = new Date(expensesMonthKey + '-01' + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -1172,8 +1172,8 @@
       const above = p.y > 46;
       const items = ebDaily[i].items;
       const tip = items.length
-        ? `${ebMonShort} ${p.day} — ${p.amountLabel}\n` + items.slice(0, 8).map(it => `• ${it.desc}: ${it.amountLabel}`).join('\n') + (items.length > 8 ? `\n…+${items.length - 8} more` : '')
-        : `${ebMonShort} ${p.day} — no spending`;
+        ? `${ebMonShort} ${p.day} · ${p.amountLabel}\n` + items.slice(0, 8).map(it => `• ${it.desc}: ${it.amountLabel}`).join('\n') + (items.length > 8 ? `\n…+${items.length - 8} more` : '')
+        : `${ebMonShort} ${p.day}, no spending`;
       return {
         x: p.x, y: p.y, day: p.day, amountLabel: p.amountLabel,
         isSpike: !!ebSpikeDays[p.day], annot: ebSpikeDays[p.day] || '',
@@ -1380,7 +1380,7 @@
 
     const goalsAvgPercent = goalCards.length ? Math.round(goalCards.reduce((s, g) => s + g.percent, 0) / goalCards.length) : 0;
     const insightCards = [
-      { icon: '📊', title: 'Outstanding Balances', text: outstanding > 0 ? `You have ${fmtMoney(outstanding)} in outstanding balances across your shoots.` : 'No outstanding balance on any shoots — everything is paid up.', clickKey: outstanding > 0 ? 'outstandingBalances' : null },
+      { icon: '📊', title: 'Outstanding Balances', text: outstanding > 0 ? `You have ${fmtMoney(outstanding)} in outstanding balances across your shoots.` : 'No outstanding balance on any shoots, everything is paid up.', clickKey: outstanding > 0 ? 'outstandingBalances' : null },
       ...((feat('goals') || yearlyGoalIncome > 0) ? [{ icon: '🎯', title: 'Goal Tracking', bars: [
         ...(feat('goals') ? [{ label: 'Savings Goals Progress', percent: goalsAvgPercent, sub: `${goalsAvgPercent}% average completion` }] : []),
         ...(yearlyGoalIncome > 0 ? [{ label: 'Yearly Income Progress', percent: yearlyProgressPercent, sub: `${yearlyProgressPercent}% of ${fmtMoney(yearlyGoalIncome)} target` }] : []),
@@ -1507,6 +1507,13 @@
     { key: 'money', label: 'Money', icon: 'money', views: ['expenses', 'insights', 'gear', 'loans', 'goals'] },
     { key: 'docs', label: 'Docs', icon: 'docs', views: ['docs'] },
   ];
+  function dockVisible(key) {
+    if (key === 'clients') return feat('clients');
+    if (key === 'docs') return feat('docs');
+    if (key === 'money') return feat('expenses') || feat('insights') || feat('gear') || feat('loans') || feat('goals');
+    return true;
+  }
+  function moneyHomeView() { return feat('expenses') ? 'expenses' : feat('insights') ? 'insights' : feat('gear') ? 'gear' : 'expenses'; }
   function dockActive(key) {
     if (key === 'calendar') return state.view === 'shoots' && state.shootsMode === 'calendar';
     if (key === 'shoots') return state.view === 'shoots' && state.shootsMode !== 'calendar';
@@ -1540,7 +1547,7 @@
       </div>
     </header>
     <nav class="dock" aria-label="Main">
-      ${DOCK.map(d => `<button type="button" class="dk${dockActive(d.key) ? ' on' : ''}" data-action="dock" data-key="${d.key}">${icon(d.icon, 22)}<span>${d.label}</span></button>`).join('')}
+      ${DOCK.filter(d => dockVisible(d.key)).map(d => `<button type="button" class="dk${dockActive(d.key) ? ' on' : ''}" data-action="dock" data-key="${d.key}">${icon(d.icon, 22)}<span>${d.label}</span></button>`).join('')}
       <div class="dk-add-wrap">
         <button type="button" class="dk-add${qa ? ' open' : ''}" data-action="quick-add-toggle" aria-label="Add" aria-expanded="${!!qa}">${icon('plus', 22)}</button>
 
@@ -1553,10 +1560,10 @@
       <button type="button" class="tb${state.moreOpen || ['calendar', 'clients', 'money', 'docs'].some(k => dockActive(k)) || state.view === 'settings' ? ' on' : ''}" data-action="more-open">${icon('more', 24)}<span>More</span></button>
     </nav>
     ${qa ? `<div class="qa-menu">
-          <button type="button" data-action="qa-shoot">${icon('shoots', 18)}<span><b>New shoot</b><small>I-book ang bagong project</small></span></button>
+          <button type="button" data-action="qa-shoot">${icon('shoots', 18)}<span><b>New shoot</b><small>Mag book ng bagong project</small></span></button>
           <button type="button" data-action="qa-payment">${icon('payments', 18)}<span><b>Log payment</b><small>May nagbayad na client</small></span></button>
-          <button type="button" data-action="qa-expense">${icon('receipt', 18)}<span><b>Add expense</b><small>Gastos sa shoot o gear</small></span></button>
-          <button type="button" data-action="qa-client">${icon('user', 18)}<span><b>New client</b><small>Bagong inquiry o lead</small></span></button>
+          ${feat('expenses') ? `<button type="button" data-action="qa-expense">${icon('receipt', 18)}<span><b>Add expense</b><small>Gastos sa shoot o gear</small></span></button>` : ''}
+          ${feat('clients') ? `<button type="button" data-action="qa-client">${icon('user', 18)}<span><b>New client</b><small>Bagong inquiry o lead</small></span></button>` : ''}
         </div>` : ''}
     ${qa ? `<div class="qa-dim" data-action="quick-add-toggle"></div>` : ''}
     ${state.moreOpen ? `<div class="sheet-dim" data-action="more-close"></div>
@@ -1564,14 +1571,14 @@
       <div class="grab"></div>
       <button type="button" class="sheet-biz" data-action="dock-settings">${bizMark(44)}<span><b>${esc(bizName())}</b>${ownerName() ? `<small>${esc(ownerName())}</small>` : ''}</span></button>
       <div class="sheet-grid">
-        ${[['calendar', 'calendar', 'Calendar'], ['clients', 'clients', 'Clients'], ['money', 'money', 'Money'], ['docs', 'docs', 'Docs']].map(([k, ic, l]) => `<button type="button" data-action="dock" data-key="${k}">${icon(ic, 24)}<span>${l}</span></button>`).join('')}
+        ${[['calendar', 'calendar', 'Calendar'], ['clients', 'clients', 'Clients'], ['money', 'money', 'Money'], ['docs', 'docs', 'Docs']].filter(([k]) => dockVisible(k)).map(([k, ic, l]) => `<button type="button" data-action="dock" data-key="${k}">${icon(ic, 24)}<span>${l}</span></button>`).join('')}
         ${feat('gear') ? `<button type="button" data-action="sheet-nav" data-view="gear">${icon('camera', 24)}<span>Gear ROI</span></button>` : ''}
         <button type="button" data-action="dock-settings">${icon('settings', 24)}<span>Settings</span></button>
       </div>
     </div>` : ''}`;
   }
   function moneyTabs() {
-    const tabs = [['expenses', 'Expenses'], ['insights', 'Insights']].concat(feat('gear') ? [['gear', 'Gear ROI']] : []).concat(feat('loans') ? [['loans', 'Loans']] : []).concat(feat('goals') ? [['goals', 'Goals']] : []);
+    const tabs = [].concat(feat('expenses') ? [['expenses', 'Expenses']] : []).concat(feat('insights') ? [['insights', 'Insights']] : []).concat(feat('gear') ? [['gear', 'Gear ROI']] : []).concat(feat('loans') ? [['loans', 'Loans']] : []).concat(feat('goals') ? [['goals', 'Goals']] : []);
     return `<div class="seg-tabs" role="tablist">${tabs.map(([v, l]) => `<button type="button" role="tab" aria-selected="${state.view === v}" class="${state.view === v ? 'on' : ''}" data-action="nav" data-view="${v}">${l}</button>`).join('')}</div>`;
   }
 
@@ -1621,7 +1628,7 @@
       </div>
     </div>
 
-    ${ctx.showBackupReminder ? `
+    ${ctx.showBackupReminder && !homeChecklist() ? `
     <div class="notice">
       <span><b>Backup reminder.</b> ${esc(ctx.backupReminderLabel)} Mag download ng kopya para sigurado.</span>
       <span class="notice-actions">
@@ -1629,19 +1636,21 @@
         <button type="button" data-action="backup-remind-later" class="btn-link">Later</button>
       </span>
     </div>` : ''}
-    ${installReady ? `<div class="notice"><span><b>I-install ang app.</b> Para mabilis buksan at gumana kahit offline.</span><span class="notice-actions"><button type="button" data-action="install-app" class="btn-primary" style="padding:8px 14px">Install</button></span></div>` : ''}
+    ${installReady ? `<div class="notice"><span><b>I install ang app.</b> Para mabilis buksan at gumana kahit offline.</span><span class="notice-actions"><button type="button" data-action="install-app" class="btn-primary" style="padding:8px 14px">Install</button></span></div>` : ''}
 
+    ${homeChecklist()}
     <div class="kpis">
-      <button type="button" class="kpi big" data-action="dock" data-key="money">
-        <small>Net ngayong ${esc(monthName)}</small>
+      <button type="button" class="kpi big" data-action="dock" data-key="${dockVisible('money') ? 'money' : 'payments'}">
+        ${feat('expenses') ? `<small>Net ngayong ${esc(monthName)}</small>
         <div class="v ${ctx.dashNetProfit < 0 ? 'neg' : ''}">${fmtMoney(ctx.dashNetProfit)}</div>
-        <div class="d desk-only">${fmtMoney(ctx.dashMonthlyRevenue)} kita · ${fmtMoney(ctx.dashMonthExpenses)} gastos</div>
-        <span class="split m-only"><span><small>Kita</small><b>${fmtMoney(ctx.dashMonthlyRevenue)}</b></span><span><small>Gastos</small><b>${fmtMoney(ctx.dashMonthExpenses)}</b></span></span>
+        <div class="d desk-only">${fmtMoney(ctx.dashMonthlyRevenue)} kita · ${fmtMoney(ctx.dashMonthExpenses)} gastos</div>` : `<small>Kita ngayong ${esc(monthName)}</small>
+        <div class="v">${fmtMoney(ctx.dashMonthlyRevenue)}</div><div class="d desk-only">Natanggap na bayad ngayong buwan</div>`}
+        ${feat('expenses') ? `<span class="split m-only"><span><small>Kita</small><b>${fmtMoney(ctx.dashMonthlyRevenue)}</b></span><span><small>Gastos</small><b>${fmtMoney(ctx.dashMonthExpenses)}</b></span></span>` : ''}
       </button>
       <button type="button" class="kpi" data-action="dock" data-key="payments"><small><span class="desk-only">Pending na singil</span><span class="m-only">Pending</span></small><div class="v">${fmtMoney(ctx.outstanding)}</div><div class="d">${pendingClients} ${pendingClients === 1 ? 'client' : 'clients'}</div></button>
       <button type="button" class="kpi" data-action="dock" data-key="shoots"><small>Shoots</small><div class="v">${monthShoots.length}</div><div class="d desk-only">${editingCount} editing</div></button>
       <button type="button" class="kpi m-only" data-action="dock" data-key="shoots" data-m="editing"><small>Editing</small><div class="v">${editingCount}</div><div class="d">projects</div></button>
-      <button type="button" class="kpi desk-kpi" data-action="dock" data-key="money"><small>Gastos</small><div class="v">${fmtMoney(ctx.dashMonthExpenses)}</div><div class="d">${esc(topExpense)}</div></button>
+      ${feat('expenses') ? `<button type="button" class="kpi desk-kpi" data-action="dock" data-key="money"><small>Gastos</small><div class="v">${fmtMoney(ctx.dashMonthExpenses)}</div><div class="d">${esc(topExpense)}</div></button>` : ''}
     </div>
 
     <div class="dash-cols">
@@ -1677,7 +1686,7 @@
     return `
     <div class="shoot-card" draggable="true" data-action="shoot-edit" data-id="${esc(s.id)}">
       <div class="sc-top"><b>${esc(s.client)}</b>${statusPill(s.status)}</div>
-      <div class="sc-meta">${[s.dateLabel, s.timeLabel, s.location].filter(x => x && x !== '—').map(esc).join(' · ')}</div>
+      <div class="sc-meta">${[s.dateLabel, s.timeLabel, s.location].filter(x => x && x !== '').map(esc).join(' · ')}</div>
       <div class="sc-type">${s.projectType ? esc(s.projectType) + ' · ' : ''}${esc(shootTypeLabel(s.shootType))}${(() => { const t = packageTiers().find(x => x.value === s.packageTier && x.value !== 'custom'); return t ? ' · ' + esc(t.label.split(' (')[0]) : ''; })()}</div>
       ${total > 0 ? `<div class="sc-money"><span class="bar"><i style="width:${pct}%"></i></span><span class="sc-bal ${bal > 0 ? '' : 'paid'}">${bal > 0 ? fmtMoney(bal) + ' balance' : 'Bayad na'}</span></div>` : ''}
       <div class="sc-foot"><span style="color:${s.daysLeftColor}">${esc(s.daysLeftLabel || '')}</span><button type="button" class="sc-move" data-action="shoot-status-open" data-id="${esc(s.id)}">Move</button></div>
@@ -1863,7 +1872,7 @@
     const fullTime = `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
         <div class="card" style="padding:20px;cursor:pointer" data-action="finance-breakdown" data-key="fulltime" title="Tap to see breakdown"><div style="color:oklch(0.45 0.015 150);font-size:12.5px;font-weight:600;text-transform:uppercase">Earned This Month ›</div><div class="sg" style="font-size:26px;font-weight:700;margin-top:8px">${fmtMoney(ctx.ftMonthTotal)}</div><div style="font-size:11.5px;color:oklch(0.55 0.015 150);margin-top:3px">${esc(ctx.financeMonthLabel)}</div></div>
-        <div class="card" style="padding:20px;cursor:pointer" data-action="finance-breakdown" data-key="fulltime-all" title="Tap to see breakdown"><div style="color:oklch(0.45 0.015 150);font-size:12.5px;font-weight:600;text-transform:uppercase">Total — All Time ›</div><div class="sg" style="font-size:26px;font-weight:700;margin-top:8px">${fmtMoney(ctx.totalFullTime)}</div><div style="font-size:11.5px;color:oklch(0.55 0.015 150);margin-top:3px">All full-time income ever logged</div></div>
+        <div class="card" style="padding:20px;cursor:pointer" data-action="finance-breakdown" data-key="fulltime-all" title="Tap to see breakdown"><div style="color:oklch(0.45 0.015 150);font-size:12.5px;font-weight:600;text-transform:uppercase">Total, All Time ›</div><div class="sg" style="font-size:26px;font-weight:700;margin-top:8px">${fmtMoney(ctx.totalFullTime)}</div><div style="font-size:11.5px;color:oklch(0.55 0.015 150);margin-top:3px">All full time income ever logged</div></div>
       </div>
       <div class="card" style="margin-bottom:24px">
         <div class="card-title">Add Income</div>
@@ -1894,7 +1903,7 @@
       </div>`;
 
     const combinedRows = [
-      ...ctx.ftMonthRows.map(f => ({ date: f.date, dateLabel: f.dateLabel, source: 'Full-Time', label: f.source || 'Full-Time Income', amountLabel: f.amountLabel })),
+      ...ctx.ftMonthRows.map(f => ({ date: f.date, dateLabel: f.dateLabel, source: 'Full Time', label: f.source || 'Full Time Income', amountLabel: f.amountLabel })),
       ...ctx.monthShoots.flatMap(s => {
         const ps = shootPaymentsOf(s).filter(p => (p.date || '').slice(0, 7) === ctx.financeMonthKey);
         if (ps.length) return ps.map(p => ({ date: p.date, dateLabel: fmtDate(p.date), source: 'Raket', label: (s.client || 'Shoot') + (p.label ? ' · ' + p.label : ''), amountLabel: fmtMoney(p.amount) }));
@@ -1905,7 +1914,7 @@
 
     const combined = `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
-        <div class="card" style="padding:20px;cursor:pointer" data-action="finance-breakdown" data-key="fulltime" title="Tap to see breakdown"><div style="color:oklch(0.45 0.015 150);font-size:12.5px;font-weight:600;text-transform:uppercase">Full-Time ›</div><div class="sg" style="font-size:24px;font-weight:700;margin-top:8px">${fmtMoney(ctx.ftMonthTotal)}</div></div>
+        <div class="card" style="padding:20px;cursor:pointer" data-action="finance-breakdown" data-key="fulltime" title="Tap to see breakdown"><div style="color:oklch(0.45 0.015 150);font-size:12.5px;font-weight:600;text-transform:uppercase">Full Time ›</div><div class="sg" style="font-size:24px;font-weight:700;margin-top:8px">${fmtMoney(ctx.ftMonthTotal)}</div></div>
         <div class="card" style="padding:20px;cursor:pointer" data-action="finance-breakdown" data-key="sidehustle" title="Tap to see breakdown"><div style="color:oklch(0.45 0.015 150);font-size:12.5px;font-weight:600;text-transform:uppercase">Raket Collected ›</div><div class="sg" style="font-size:24px;font-weight:700;margin-top:8px">${fmtMoney(ctx.monthSideHustleCollected)}</div></div>
         <div class="card" style="padding:20px;cursor:pointer" data-action="finance-breakdown" data-key="combined" title="Tap to see breakdown"><div style="color:oklch(0.45 0.015 150);font-size:12.5px;font-weight:600;text-transform:uppercase">Combined Income ›</div><div class="sg" style="font-size:24px;font-weight:700;margin-top:8px;color:oklch(0.55 0.12 175)">${fmtMoney(ctx.monthCombinedTotal)}</div></div>
         <div class="card" style="padding:20px;cursor:pointer" data-action="finance-breakdown" data-key="remaining" title="Tap to see breakdown"><div style="color:oklch(0.45 0.015 150);font-size:12.5px;font-weight:600;text-transform:uppercase">Remaining Balance ›</div><div class="sg" style="font-size:24px;font-weight:700;margin-top:8px;color:oklch(0.62 0.17 45)">${fmtMoney(ctx.monthOutstanding)}</div></div>
@@ -1917,7 +1926,7 @@
           <div style="width:${ctx.monthSideHustleSharePercent}%;background:oklch(0.55 0.14 150)"></div>
         </div>
         <div style="display:flex;gap:20px;margin-top:12px;font-size:12.5px">
-          <div style="display:flex;align-items:center;gap:6px;color:oklch(0.42 0.015 150)"><span style="width:9px;height:9px;border-radius:50%;background:oklch(0.55 0.12 175)"></span>Full-Time (${ctx.monthFullTimeSharePercent}%)</div>
+          <div style="display:flex;align-items:center;gap:6px;color:oklch(0.42 0.015 150)"><span style="width:9px;height:9px;border-radius:50%;background:oklch(0.55 0.12 175)"></span>Full Time (${ctx.monthFullTimeSharePercent}%)</div>
           <div style="display:flex;align-items:center;gap:6px;color:oklch(0.42 0.015 150)"><span style="width:9px;height:9px;border-radius:50%;background:oklch(0.55 0.14 150)"></span>Raket (${ctx.monthSideHustleSharePercent}%)</div>
         </div>
       </div>
@@ -1926,7 +1935,7 @@
         ${combinedRows.map(r => `
           <div class="t-row" style="grid-template-columns:1fr 1.4fr 2fr 1fr">
             <div style="font-size:12.5px;color:oklch(0.45 0.015 150)">${r.dateLabel}</div>
-            <div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;padding:3px 9px;border-radius:20px;background:${r.source === 'Full-Time' ? 'oklch(0.92 0.05 175)' : 'oklch(0.92 0.06 150)'};color:${r.source === 'Full-Time' ? 'oklch(0.4 0.1 175)' : 'oklch(0.4 0.13 150)'}">${r.source}</span></div>
+            <div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;padding:3px 9px;border-radius:20px;background:${r.source === 'Full Time' ? 'oklch(0.92 0.05 175)' : 'oklch(0.92 0.06 150)'};color:${r.source === 'Full Time' ? 'oklch(0.4 0.1 175)' : 'oklch(0.4 0.13 150)'}">${r.source}</span></div>
             <div style="font-size:13.5px;font-weight:600">${esc(r.label)}</div>
             <div style="font-size:13.5px;font-weight:600">${r.amountLabel}</div>
           </div>`).join('')}
@@ -2018,8 +2027,8 @@
     ${ebTab === 'log' ? expensesCalendarSection : ''}
     ${ebTab === 'breakdown' ? (ctx.expenseBreakdown.hasData ? (() => { const eb = ctx.expenseBreakdown; return `
     <div class="card" style="margin-top:24px">
-      <div class="card-title" style="margin-bottom:4px;font-size:15px">Expense Breakdown — ${esc(ctx.expensesMonthLabel)}</div>
-      <div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin-bottom:16px">Auto-sorted from your descriptions — spending trend and where it went.</div>
+      <div class="card-title" style="margin-bottom:4px;font-size:15px">Expense Breakdown · ${esc(ctx.expensesMonthLabel)}</div>
+      <div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin-bottom:16px">Automatic na naka sort from your descriptions, spending trend and where it went.</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px">
         <div style="background:var(--card2);border-radius:12px;padding:12px 14px"><div style="font-size:10.5px;font-weight:600;color:oklch(0.48 0.015 150);margin-bottom:4px">Total spent</div><div class="sg" style="font-size:16px;font-weight:700">${eb.stat.totalLabel}</div><div style="font-size:10.5px;color:oklch(0.55 0.015 150);margin-top:2px">${eb.stat.perDayLabel} / day</div></div>
         <div style="background:var(--card2);border-radius:12px;padding:12px 14px"><div style="font-size:10.5px;font-weight:600;color:oklch(0.48 0.015 150);margin-bottom:4px">Debt & cards</div><div class="sg" style="font-size:16px;font-weight:700;color:oklch(0.4 0.13 150)">${eb.stat.debtLabel}</div><div style="font-size:10.5px;color:oklch(0.55 0.015 150);margin-top:2px">${eb.stat.debtPct}% of month</div></div>
@@ -2049,9 +2058,9 @@
           <div class="sg" style="font-weight:700;font-size:15px;color:oklch(0.4 0.13 150)">${esc(eb.selDetail.amountLabel)}</div>
         </div>
         ${eb.selDetail.hasItems ? eb.selDetail.items.map(it => `<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:12px"><span style="color:oklch(0.35 0.02 150);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.desc)}</span><span style="font-weight:600;flex:none">${esc(it.amountLabel)}</span></div>`).join('') : `<div style="font-size:12px;color:oklch(0.55 0.015 150)">No spending logged this day.</div>`}
-      </div>` : `<div style="font-size:11.5px;color:oklch(0.55 0.015 150);margin-top:8px;text-align:center;padding:8px">👆 Tap a point on the chart above to see that day's expenses.</div>`}
+      </div>` : `<div style="font-size:11.5px;color:oklch(0.55 0.015 150);margin-top:8px;text-align:center;padding:8px">Tap a point on the chart above to see that day's expenses.</div>`}
       <div class="sg" style="font-weight:700;font-size:12.5px;margin:20px 0 2px">By Category</div>
-      <div style="font-size:10.5px;color:oklch(0.55 0.015 150);margin-bottom:8px">Tap a category to see its items — tap "Move" to fix any that landed in the wrong place. The app remembers your fix for next time.</div>
+      <div style="font-size:10.5px;color:oklch(0.55 0.015 150);margin-bottom:8px">Tap a category to see its items, tap "Move" to fix any that landed in the wrong place. The app remembers your fix for next time.</div>
       ${eb.cats.map(c => `
         <div style="margin:9px 0">
           <div data-action="exp-cat-toggle" data-cat="${esc(c.name)}" style="cursor:pointer;display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px">
@@ -2072,7 +2081,7 @@
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:16px">
       <div class="card">
-        <div class="card-title" style="margin-bottom:10px;font-size:15px">Biggest Expenses — ${esc(ctx.expensesMonthLabel)}</div>
+        <div class="card-title" style="margin-bottom:10px;font-size:15px">Biggest Expenses · ${esc(ctx.expensesMonthLabel)}</div>
         ${eb.top.map(t => `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border2)"><div style="font-size:10.5px;color:oklch(0.55 0.015 150);width:44px;flex:none">${esc(t.dateLabel)}</div><div style="flex:1;min-width:0;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.desc)}${t.isDebt ? ` <span style="font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:5px;background:oklch(0.92 0.05 150);color:oklch(0.4 0.13 150)">debt</span>` : ''}</div><div style="font-size:12px;font-weight:700;flex:none">${esc(t.amountLabel)}</div></div>`).join('')}
       </div>
     </div>` })() : `<div class="card" style="margin-top:24px"><div style="text-align:center;padding:34px 20px;color:oklch(0.55 0.015 150);font-size:12.5px">No expenses logged for ${esc(ctx.expensesMonthLabel)} yet.</div></div>`) : ''}
@@ -2100,7 +2109,7 @@
       </div>
     </div>
     <button type="button" data-action="expenses-list-toggle" style="all:unset;cursor:pointer;display:flex;align-items:center;justify-content:space-between;width:100%;box-sizing:border-box;background:var(--panel2);border-radius:12px;padding:12px 16px;margin-top:24px;margin-bottom:${state.expensesListOpen ? '16' : '0'}px">
-      <span style="font-size:13px;font-weight:700;color:oklch(0.3 0.02 150)">${state.expensesListOpen ? '▾' : '▸'} Full list — ${esc(ctx.expensesMonthLabel)} (${ctx.filteredExpenseRows.length})</span>
+      <span style="font-size:13px;font-weight:700;color:oklch(0.3 0.02 150)">${state.expensesListOpen ? '▾' : '▸'} Full list · ${esc(ctx.expensesMonthLabel)} (${ctx.filteredExpenseRows.length})</span>
       <span style="font-size:13px;font-weight:700;color:oklch(0.4 0.02 150)">${fmtMoney(ctx.monthExpensesTotal)}</span>
     </button>
     ${state.expensesListOpen ? `
@@ -2167,7 +2176,7 @@
     const searchClear = state.clientsSearch ? `<button type="button" class="search-clear" data-action="search-clear" data-field="clientsSearch">✕</button>` : '';
     return `
     <div class="page-head">
-      <div><div class="page-title sg">Clients</div><div class="page-sub">Leads, contacts, and follow-ups</div></div>
+      <div><div class="page-title sg">Clients</div><div class="page-sub">Leads, contacts, and follow ups</div></div>
       <button type="button" class="btn-primary" data-action="client-add-open">+ Add Client</button>
     </div>
     <div class="search-wrap">
@@ -2261,7 +2270,7 @@
             ${docDueCells.map(c => c.blank ? `<div></div>` : `
               <div data-action="doc-due-pick" data-date="${c.dateStr}" style="aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12.5px;font-weight:600;background:${c.bg};border:1px solid ${c.border};color:${c.textColor}">${c.dayNum}</div>`).join('')}
           </div>
-          <div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:10px">${docType === 'quotation' ? 'Auto-set to 30 days after the issue date — click a date here to override.' : 'Auto-set to 10 days after the invoice date — click a date here to override.'}</div>
+          <div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:10px">${docType === 'quotation' ? 'Automatic to 30 days after the issue date, click a date here to override.' : 'Automatic to 10 days after the invoice date, click a date here to override.'}</div>
           ${docType === 'quotation' ? `<button type="button" data-action="doc-due-clear" style="all:unset;cursor:pointer;color:oklch(0.55 0.18 25);font-size:11.5px;font-weight:700;margin-top:8px;display:inline-block">✕ No expiry (clear date)</button>` : ''}
         </div>` : ''}
       </div>`;
@@ -2284,7 +2293,7 @@
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid oklch(0 0 0 / 0.08)">
         <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:3px">Issue Date</div><div style="font-size:12.5px;font-weight:700">${fmtDateShortYear(d.date)}</div></div>
         <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:3px">Valid Until</div><div style="font-size:12.5px;font-weight:700;color:oklch(0.4 0.13 150)">${d.dueDate ? fmtDateShortYear(d.dueDate) : 'No expiry'}</div></div>
-        <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:3px">Project</div><div style="font-size:12.5px;font-weight:700">${esc(d.description) || '—'}</div></div>
+        <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:3px">Project</div><div style="font-size:12.5px;font-weight:700">${esc(d.description) || ''}</div></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid oklch(0 0 0 / 0.08)">
         <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.4 0.13 150);text-transform:uppercase;margin-bottom:6px">Prepared By</div><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">${esc(ownerName() || bizName())}</div><div style="font-size:11.5px;color:oklch(0.5 0.015 150)">${esc(S().tagline || '')}${S().contactLine ? '<br>' + esc(S().contactLine) : ''}</div></div>
@@ -2340,7 +2349,7 @@
               <div style="font-size:12px;color:oklch(0.5 0.015 150);margin-top:3px">${esc(rd.description || '')} · ${fmtDate(rd.date)} · ${fmtMoney(rd.amount)}${rIsInvoice ? ' · ' + esc(rd.paymentStatus) : ''}</div>
             </div>
             <div style="display:flex;gap:8px;flex:none">
-              ${r.type === 'quotation' ? `<button type="button" data-action="doc-book-shoot" data-id="${esc(r.id)}" title="Client pushed through — create a booked shoot from this quotation" style="all:unset;cursor:pointer;padding:8px 12px;border-radius:8px;background:oklch(0.45 0.14 150);color:#fff;font-size:12.5px;font-weight:700">✓ Book</button>` : ''}
+              ${r.type === 'quotation' ? `<button type="button" data-action="doc-book-shoot" data-id="${esc(r.id)}" title="Client pushed through, create a booked shoot from this quotation" style="all:unset;cursor:pointer;padding:8px 12px;border-radius:8px;background:oklch(0.45 0.14 150);color:#fff;font-size:12.5px;font-weight:700">✓ Book</button>` : ''}
               <button type="button" data-action="doc-history-edit" data-id="${esc(r.id)}" style="all:unset;cursor:pointer;padding:8px 12px;border-radius:8px;background:oklch(0.93 0.03 250);color:oklch(0.45 0.13 260);font-size:12.5px;font-weight:700">Edit</button>
               <button type="button" data-action="doc-history-download" data-id="${esc(r.id)}" style="all:unset;cursor:pointer;padding:8px 12px;border-radius:8px;background:oklch(0.92 0.06 150);color:oklch(0.4 0.13 150);font-size:12.5px;font-weight:700">Download</button>
               <button type="button" data-action="doc-history-delete" data-id="${esc(r.id)}" style="all:unset;cursor:pointer;padding:8px 12px;border-radius:8px;background:oklch(0.92 0.08 25);color:oklch(0.5 0.19 25);font-size:12.5px;font-weight:700">Delete</button>
@@ -2384,16 +2393,16 @@
           </div>
           <div class="field"><label>Currency</label>
             <div style="display:flex;gap:8px">
-              <button type="button" data-action="doc-currency" data-cur="PHP" style="all:unset;cursor:pointer;flex:1;text-align:center;box-sizing:border-box;padding:9px;border-radius:9px;font-size:13px;font-weight:700;border:1.5px solid ${d.currency !== 'USD' ? 'oklch(0.5 0.13 150)' : 'var(--border3)'};background:${d.currency !== 'USD' ? 'oklch(0.94 0.04 150)' : 'transparent'};color:${d.currency !== 'USD' ? 'oklch(0.34 0.13 150)' : 'oklch(0.5 0.015 150)'}">₱ PHP <span style="font-weight:500;font-size:11px">— local</span></button>
-              <button type="button" data-action="doc-currency" data-cur="USD" style="all:unset;cursor:pointer;flex:1;text-align:center;box-sizing:border-box;padding:9px;border-radius:9px;font-size:13px;font-weight:700;border:1.5px solid ${d.currency === 'USD' ? 'oklch(0.5 0.13 150)' : 'var(--border3)'};background:${d.currency === 'USD' ? 'oklch(0.94 0.04 150)' : 'transparent'};color:${d.currency === 'USD' ? 'oklch(0.34 0.13 150)' : 'oklch(0.5 0.015 150)'}">$ USD <span style="font-weight:500;font-size:11px">— foreign</span></button>
+              <button type="button" data-action="doc-currency" data-cur="PHP" style="all:unset;cursor:pointer;flex:1;text-align:center;box-sizing:border-box;padding:9px;border-radius:9px;font-size:13px;font-weight:700;border:1.5px solid ${d.currency !== 'USD' ? 'oklch(0.5 0.13 150)' : 'var(--border3)'};background:${d.currency !== 'USD' ? 'oklch(0.94 0.04 150)' : 'transparent'};color:${d.currency !== 'USD' ? 'oklch(0.34 0.13 150)' : 'oklch(0.5 0.015 150)'}">₱ PHP <span style="font-weight:500;font-size:11px"> local</span></button>
+              <button type="button" data-action="doc-currency" data-cur="USD" style="all:unset;cursor:pointer;flex:1;text-align:center;box-sizing:border-box;padding:9px;border-radius:9px;font-size:13px;font-weight:700;border:1.5px solid ${d.currency === 'USD' ? 'oklch(0.5 0.13 150)' : 'var(--border3)'};background:${d.currency === 'USD' ? 'oklch(0.94 0.04 150)' : 'transparent'};color:${d.currency === 'USD' ? 'oklch(0.34 0.13 150)' : 'oklch(0.5 0.015 150)'}">$ USD <span style="font-weight:500;font-size:11px"> foreign</span></button>
             </div>
           </div>
           <div class="row-2">
-            <div class="field"><label>${docNumberFieldLabel}</label><input type="text" value="${esc(d.invoiceNumber)}" data-bind="docDraft.invoiceNumber" placeholder="${isInv ? 'e.g. INV-2026-014' : 'e.g. SOA-2026-014'}"/><div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">Auto-suggested — increments each time you generate one.</div></div>
+            <div class="field"><label>${docNumberFieldLabel}</label><input type="text" value="${esc(d.invoiceNumber)}" data-bind="docDraft.invoiceNumber" placeholder="${isInv ? 'e.g. INV 2026 014' : 'e.g. SOA 2026 014'}"/><div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">Suggested, increments each time you generate one.</div></div>
             ${docDuePicker}
           </div>
-          <div class="field"><label>Line Items Breakdown</label><textarea rows="3" data-bind="docDraft.lineItems" placeholder="One item per line, e.g.&#10;Package fee - ₱10,000&#10;Transport - ₱1,000">${esc(d.lineItems)}</textarea><div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">Press Enter for a new item — each line becomes its own row in the invoice table.</div></div>
-          <div class="field"><label>Payment Details</label><input type="text" value="${esc(d.paymentDetails)}" data-bind="docDraft.paymentDetails" placeholder="e.g. GCash 09XX XXX XXXX - Your Name"/></div>
+          <div class="field"><label>Line Items Breakdown</label><textarea rows="3" data-bind="docDraft.lineItems" placeholder="One item per line, e.g.&#10;Package fee: ₱10,000&#10;Transport: ₱1,000">${esc(d.lineItems)}</textarea><div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">Press Enter for a new item, each line becomes its own row in the invoice table.</div></div>
+          <div class="field"><label>Payment Details</label><input type="text" value="${esc(d.paymentDetails)}" data-bind="docDraft.paymentDetails" placeholder="e.g. GCash 09XX XXX XXXX · Your Name"/></div>
           <div class="field"><label>Payment Status</label>
             <select data-bind="docDraft.paymentStatus">
               <option value="Unpaid" ${d.paymentStatus === 'Unpaid' ? 'selected' : ''}>Unpaid</option>
@@ -2415,16 +2424,16 @@
               </div>
             </div>` : `
             <button type="button" data-action="doc-qr-upload" style="all:unset;cursor:pointer;display:block;text-align:center;box-sizing:border-box;width:100%;padding:11px;border-radius:10px;border:1.5px dashed var(--border3);background:var(--card2);color:oklch(0.4 0.13 150);font-size:12.5px;font-weight:700">＋ Upload payment QR image</button>
-            <div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">Upload once — it's saved on this device and can appear on every invoice you generate here. Client scans it to pay.</div>`}
+            <div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">Upload once, it's saved on this device and can appear on every invoice you generate here. Client scans it to pay.</div>`}
           </div>
         </div>` : ''}
         ${docType === 'quotation' ? `
         <div style="border-top:1px solid oklch(0 0 0 / 0.07);margin-top:4px;padding-top:14px;display:flex;flex-direction:column;gap:14px">
           ${docDuePicker}
-          <div class="field"><label>Inclusions</label><textarea rows="4" data-bind="docDraft.lineItems" placeholder="One per line, e.g.&#10;Full-day video shoot - ₱10,000&#10;Drone coverage - ₱3,000&#10;Editing and color grading - ₱2,000">${esc(d.lineItems)}</textarea><div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">One item per line. Add "- ₱amount" at the end to show a price. Each line becomes a numbered inclusion.</div></div>
+          <div class="field"><label>Inclusions</label><textarea rows="4" data-bind="docDraft.lineItems" placeholder="One per line, e.g.&#10;Whole day video shoot: ₱10,000&#10;Drone coverage: ₱3,000&#10;Editing and color grading: ₱2,000">${esc(d.lineItems)}</textarea><div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">One item per line. Add ": ₱amount" at the end to show a price. Each line becomes a numbered inclusion.</div></div>
         </div>` : ''}
         ${state.editingDocId ? `
-        <div style="font-size:12px;color:oklch(0.45 0.13 260);background:oklch(0.96 0.03 260);border:1px solid oklch(0.86 0.05 260);padding:8px 11px;border-radius:9px;margin-top:4px">✎ Editing this ${docTitle.toLowerCase()}${isInvoice ? ` (#${esc(d.invoiceNumber)})` : ''} — “Update” saves it back to the same record (no new copy).</div>
+        <div style="font-size:12px;color:oklch(0.45 0.13 260);background:oklch(0.96 0.03 260);border:1px solid oklch(0.86 0.05 260);padding:8px 11px;border-radius:9px;margin-top:4px">✎ Editing this ${docTitle.toLowerCase()}${isInvoice ? ` (#${esc(d.invoiceNumber)})` : ''}, “Update” saves it back to the same record (no new copy).</div>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button type="button" class="btn-primary" style="flex:1;text-align:center" data-action="doc-generate">Update ${docTitle}</button>
           <button type="button" class="btn-ghost" style="text-align:center;background:var(--card2);padding:0 16px" data-action="doc-cancel-edit">Cancel</button>
@@ -2450,7 +2459,7 @@
             <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:3px">Payment Status</div><div style="font-size:12.5px;font-weight:700;color:${paymentStatusColor}">${esc((d.paymentStatus || 'Unpaid').toUpperCase())}</div></div>
           ` : `
             <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:3px">Issue Date</div><div style="font-size:12.5px;font-weight:700">${fmtDateShortYear(d.date)}</div></div>
-            <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:3px">Project / Service</div><div style="font-size:12.5px;font-weight:700">${esc(d.description) || '—'}</div></div>
+            <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:3px">Project / Service</div><div style="font-size:12.5px;font-weight:700">${esc(d.description) || ''}</div></div>
             <div><div style="font-size:9.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:3px">Document Type</div><div style="font-size:12.5px;font-weight:700">${docType === 'quotation' ? 'Quotation' : 'Contract'}</div></div>
           `}
         </div>
@@ -2473,7 +2482,7 @@
           </div>
           ${(parseLineItems(d.lineItems).length ? parseLineItems(d.lineItems) : [{ label: 'No items listed', amount: null }]).map(it => `
           <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-top:1px solid oklch(0 0 0 / 0.06);font-size:12.5px">
-            <span>${esc(it.label)}</span><span style="font-weight:600;flex:none">${it.amount != null ? fmtMoneyCur(it.amount, d.currency) : '—'}</span>
+            <span>${esc(it.label)}</span><span style="font-weight:600;flex:none">${it.amount != null ? fmtMoneyCur(it.amount, d.currency) : ''}</span>
           </div>`).join('')}
         </div>` : `
         <div style="font-size:13px;line-height:1.7;margin-bottom:18px">${esc(meta.body(d))}</div>`}
@@ -2553,23 +2562,151 @@
       .catch(() => { licenseState = { key, busy: false, error: 'Kailangan ng internet para ma activate. Subukan ulit.' }; render(); });
   }
 
+  /* ---------------- guided setup (first run) ---------------- */
+  const SETUP_FEATURES = [
+    { key: 'clients', label: 'Clients', hint: 'Listahan ng clients, inquiries at follow ups', icon: 'clients' },
+    { key: 'expenses', label: 'Expenses', hint: 'Gastos sa shoot, gear at subscriptions', icon: 'receipt' },
+    { key: 'docs', label: 'Documents', hint: 'Quotation, contract at SOA na may logo mo', icon: 'docs' },
+    { key: 'insights', label: 'Insights', hint: 'Kita kada buwan at monthly report', icon: 'money' },
+    { key: 'gear', label: 'Gear ROI', hint: 'Bawi na ba ang camera at lens mo?', icon: 'camera' },
+  ];
+  const SETUP_SPLITS = {
+    half: { label: '50 / 50', hint: 'Kalahati bilang down payment, kalahati pag deliver', ms: [{ label: 'Down Payment', pct: 50 }, { label: 'Final Payment', pct: 50 }] },
+    thirty: { label: '30 / 70', hint: '30% para ma lock ang date, 70% pag deliver', ms: [{ label: 'Reservation', pct: 30 }, { label: 'Final Payment', pct: 70 }] },
+    full: { label: 'Full payment', hint: 'Isang bayaran lang', ms: [{ label: 'Full Payment', pct: 100 }] },
+  };
+  function setupDraft() {
+    if (!state.setup) {
+      const st = S();
+      state.setup = { step: 0, role: '', businessName: st.businessName || '', ownerName: st.ownerName || '', contactLine: st.contactLine || '', logo: st.logo || '', split: 'half',
+        features: { clients: true, expenses: true, docs: true, insights: true, gear: false }, error: '' };
+    }
+    return state.setup;
+  }
   function modalOnboarding() {
     if (S().onboarded || (LICENSE_REQUIRED && !hasLicense())) return '';
-    const st = S();
+    const d = setupDraft();
+    const steps = 5;
+    const dots = `<div class="su-dots">${Array.from({ length: steps }, (_, i) => `<span class="${i <= d.step ? 'on' : ''}"></span>`).join('')}</div>`;
+    const back = d.step > 0 ? `<button type="button" class="su-back" data-action="setup-back">${'‹'} Back</button>` : '<span></span>';
+    const choice = (action, key, on, title, hint, ic) => `<button type="button" class="su-choice${on ? ' on' : ''}" data-action="${action}" data-key="${key}">${ic ? icon(ic, 22) : ''}<span><b>${title}</b><small>${hint}</small></span><i class="su-check">${on ? icon('check', 14) : ''}</i></button>`;
+    let body = '', next = '';
+    if (d.step === 0) {
+      body = `<div class="su-hero"><span class="su-logo-word">eksakto<span>.</span></span></div>
+        <h2 class="su-title">Buuin natin ang tracker mo.</h2>
+        <p class="su-sub">Ilang tanong lang, mga isang minuto. Base sa sagot mo, ilalagay namin ang mga kailangan mo at itatago ang hindi.</p>`;
+      next = `<button type="button" class="btn-primary su-next" data-action="setup-next">Simulan</button>`;
+    } else if (d.step === 1) {
+      body = `<h2 class="su-title">Ano ang raket mo?</h2><p class="su-sub">Lalagyan namin ng sample na packages at klase ng project. Pwede mong palitan lahat mamaya.</p>
+        <div class="su-list">
+          ${choice('setup-role', 'video', d.role === 'video', 'Videographer', 'Weddings, events, corporate, music videos', 'video')}
+          ${choice('setup-role', 'photo', d.role === 'photo', 'Photographer', 'Portraits, prenups, products, events', 'camera')}
+          ${choice('setup-role', 'both', d.role === 'both', 'Pareho', 'Video at photo', 'shoots')}
+        </div>`;
+      next = `<button type="button" class="btn-primary su-next" data-action="setup-next" ${d.role ? '' : 'disabled'}>Next</button>`;
+    } else if (d.step === 2) {
+      body = `<h2 class="su-title">Ang business mo</h2><p class="su-sub">Lalabas ito sa quotation, contract at SOA na ipapadala mo.</p>
+        <div class="su-logo">${d.logo ? `<img src="${d.logo}" alt=""/>` : `<span>${icon('camera', 20)}</span>`}<button type="button" class="btn-link" data-action="setup-logo">${d.logo ? 'Palitan ang logo' : 'Mag upload ng logo (optional)'}</button></div>
+        <div class="field"><label>Pangalan ng business</label><input type="text" id="su-biz" value="${esc(d.businessName)}" placeholder="e.g. Reyes Films" autocomplete="organization"/></div>
+        <div class="field"><label>Pangalan mo</label><input type="text" id="su-owner" value="${esc(d.ownerName)}" placeholder="e.g. Juan Reyes" autocomplete="name"/></div>
+        <div class="field"><label>Contact (optional)</label><input type="text" id="su-contact" value="${esc(d.contactLine)}" placeholder="e.g. 0917 123 4567 · hello@reyesfilms.ph"/></div>
+        ${d.error ? `<div class="su-err">${esc(d.error)}</div>` : ''}`;
+      next = `<button type="button" class="btn-primary su-next" data-action="setup-next">Next</button>`;
+    } else if (d.step === 3) {
+      body = `<h2 class="su-title">Paano ka nagpapabayad?</h2><p class="su-sub">Ito ang gagamitin sa singilan at SOA. Pwedeng baguhin sa Settings.</p>
+        <div class="su-list">${Object.keys(SETUP_SPLITS).map(k => choice('setup-split', k, d.split === k, SETUP_SPLITS[k].label, SETUP_SPLITS[k].hint, 'payments')).join('')}</div>`;
+      next = `<button type="button" class="btn-primary su-next" data-action="setup-next">Next</button>`;
+    } else if (d.step === 4) {
+      body = `<h2 class="su-title">Ano ang gusto mong gamitin?</h2><p class="su-sub">Kasama na lagi ang Shoots, Calendar at Payments. Piliin ang iba na kailangan mo.</p>
+        <div class="su-list">${SETUP_FEATURES.map(f => choice('setup-feature', f.key, !!d.features[f.key], f.label, f.hint, f.icon)).join('')}</div>`;
+      next = `<button type="button" class="btn-primary su-next" data-action="setup-next">Next</button>`;
+    } else {
+      const picked = ['Shoots at Calendar', 'Payments'].concat(SETUP_FEATURES.filter(f => d.features[f.key]).map(f => f.label));
+      body = `<div class="su-hero"><span class="su-done">${icon('check', 28)}</span></div>
+        <h2 class="su-title">Ready na ang tracker mo!</h2>
+        <p class="su-sub">Ito ang kasama sa Eksakto mo. Pwede mong dagdagan o bawasan anytime sa Settings.</p>
+        <div class="su-tags">${picked.map(x => `<span>${esc(x)}</span>`).join('')}</div>`;
+      next = `<div class="su-final"><button type="button" class="btn-primary su-next" data-action="setup-finish" data-sample="0">Simulan na</button>
+        <button type="button" class="btn-ghost su-next" data-action="setup-finish" data-sample="1">Subukan muna gamit ang sample data</button></div>`;
+    }
     return `
-    <div class="modal-backdrop" style="z-index:3000">
-      <form class="modal-box" data-action="save-onboarding" style="background:var(--panel);display:flex;flex-direction:column;gap:16px">
-        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.5px">eksakto<span style="color:var(--accent1)">.</span></div>
-        <div>
-          <div class="modal-title" style="font-size:20px">Welcome! Setup muna tayo, 1 minuto lang.</div>
-          <div style="font-size:13.5px;color:var(--text-dim);margin-top:6px;line-height:1.5">Lalabas ang mga ito sa quotation, contract at SOA mo. Pwede mo itong palitan anytime sa Settings.</div>
-        </div>
-        <div class="field"><label>Pangalan ng business</label><input type="text" id="ob-biz" value="${esc(st.businessName || '')}" placeholder="e.g. Reyes Films" required/></div>
-        <div class="field"><label>Pangalan mo</label><input type="text" id="ob-owner" value="${esc(st.ownerName || '')}" placeholder="e.g. Juan Reyes"/></div>
-        <div style="font-size:12.5px;color:var(--text-dim);line-height:1.5;background:var(--tint);padding:10px 12px;border-radius:10px">Ang data mo ay naka save lang sa device na ito, hindi sa internet. Mag backup ka linggo linggo sa Settings.</div>
-        <button type="submit" class="btn-primary" style="justify-content:center;padding:13px 16px;font-size:14px">Simulan</button>
-      </form>
+    <div class="modal-backdrop su-backdrop" style="z-index:3000">
+      <div class="modal-box su-box" role="dialog" aria-label="Setup">
+        <div class="su-top">${back}${dots}<span class="su-step">${Math.min(d.step + 1, 6)}/6</span></div>
+        <div class="su-body">${body}</div>
+        ${next}
+      </div>
     </div>`;
+  }
+  function setupReadInputs() {
+    const d = setupDraft();
+    const v = id => { const el = document.getElementById(id); return el ? el.value : null; };
+    if (v('su-biz') !== null) d.businessName = v('su-biz');
+    if (v('su-owner') !== null) d.ownerName = v('su-owner');
+    if (v('su-contact') !== null) d.contactLine = v('su-contact');
+  }
+  function sampleData() {
+    const day = n => addDays(TODAY_STR, n);
+    const tiers = packageTiers();
+    const t = i => tiers[Math.min(i, tiers.length - 2)] || { value: 'custom', price: 15000 };
+    const pt = projectTypes();
+    return {
+      shoots: [
+        { id: 'sample_1', sample: true, client: 'Santos Wedding', location: 'Tagaytay', date: day(5), time: '14:00', status: 'idea', shootType: 'Real Estate', serviceType: 'shoot', packageTier: t(2).value, package: t(2).price, paid: Math.round(t(2).price / 2), payments: [{ id: 'sp_s1', amount: Math.round(t(2).price / 2), date: TODAY_STR, label: 'Down Payment' }], addons: {}, projectType: pt[0] || '' },
+        { id: 'sample_2', sample: true, client: 'Kopi Co. brand shoot', location: 'BGC', date: day(12), time: '09:00', status: 'tentative', shootType: 'Real Estate', serviceType: 'shoot', packageTier: t(0).value, package: t(0).price, paid: 0, payments: [], addons: {}, projectType: pt[3] || '' },
+        { id: 'sample_3', sample: true, client: 'Dela Cruz Prenup', location: 'Batangas', date: TODAY_STR, time: '06:00', status: 'shot', shootType: 'Real Estate', serviceType: 'shoot', packageTier: t(1).value, package: t(1).price, paid: t(1).price, payments: [{ id: 'sp_s3', amount: t(1).price, date: TODAY_STR, label: 'Full Payment' }], addons: {}, projectType: pt[1] || '' },
+      ],
+      clients: [
+        { id: 'sample_c1', sample: true, name: 'Santos Wedding', phone: '', email: '', leadStatus: 'Booked', followUpDate: '', notes: '' },
+        { id: 'sample_c2', sample: true, name: 'Kopi Co. brand shoot', phone: '', email: '', leadStatus: 'Proposal Sent', followUpDate: day(2), notes: '' },
+        { id: 'sample_c3', sample: true, name: 'Dela Cruz Prenup', phone: '', email: '', leadStatus: 'Booked', followUpDate: '', notes: '' },
+      ],
+      expenses: [
+        { id: 'sample_e1', sample: true, description: 'Lens rental', amount: 2500, date: TODAY_STR, category: (expenseCategories()[1] || 'Other') },
+        { id: 'sample_e2', sample: true, description: 'Grab papunta sa shoot', amount: 380, date: TODAY_STR, category: (expenseCategories()[2] || 'Other') },
+      ],
+    };
+  }
+  function hasSampleData() { return state.shoots.some(x => x.sample) || state.clients.some(x => x.sample) || state.expenses.some(x => x.sample); }
+  function finishSetup(withSample) {
+    const d = setupDraft();
+    const role = d.role || 'video';
+    const base = role === 'photo' ? STARTER_PRESETS.photo : STARTER_PRESETS.video;
+    const types = role === 'both' ? Array.from(new Set(STARTER_PRESETS.video.projectTypes.concat(STARTER_PRESETS.photo.projectTypes).filter(x => x !== 'Others'))).concat(['Others']) : base.projectTypes.slice();
+    const settings = { ...state.settings,
+      businessName: d.businessName.trim(), ownerName: d.ownerName.trim(), contactLine: d.contactLine.trim(), logo: d.logo || state.settings.logo || '',
+      tagline: role === 'both' ? 'Video & Photo Production' : base.tagline,
+      packages: base.packages.map(x => ({ ...x })), addons: base.addons.map(x => ({ ...x })), projectTypes: types,
+      milestones: SETUP_SPLITS[d.split].ms.map(x => ({ ...x })),
+      features: { ...(state.settings.features || {}), ...d.features }, onboarded: true, checklistHidden: false };
+    state = { ...state, settings, setup: null };
+    const patch = { view: 'dashboard', settings };
+    if (withSample) {
+      const sd = sampleData();
+      Object.assign(patch, { shoots: sd.shoots.concat(state.shoots), clients: sd.clients.concat(state.clients), expenses: sd.expenses.concat(state.expenses) });
+    }
+    setState(patch);
+  }
+
+  // "Simulan dito" checklist on Home until the basics are done (or hidden).
+  function homeChecklist() {
+    if (S().checklistHidden) return '';
+    const real = state.shoots.filter(x => !x.sample);
+    const items = [
+      { done: real.length > 0, label: 'Mag add ng unang shoot mo', action: 'shoot-add-open' },
+      { done: real.some(x => (Number(x.paid) || 0) > 0), label: 'Mag log ng bayad ng client', action: 'dock', key: 'payments' },
+    ];
+    if (feat('docs')) items.push({ done: (state.documents || []).length > 0, label: 'Gumawa ng quotation o SOA', action: 'dock', key: 'docs' });
+    items.push({ done: !!localStorage.getItem('shoottracker_last_backup'), label: 'Mag download ng backup', action: 'backup-download' });
+    const doneCount = items.filter(i => i.done).length;
+    if (doneCount === items.length && !hasSampleData()) return '';
+    return `
+    <section class="chk">
+      <div class="chk-head"><div><h2>Simulan dito</h2><small>${doneCount} sa ${items.length} tapos na</small></div><button type="button" class="btn-link" data-action="checklist-hide">Itago</button></div>
+      <div class="chk-bar"><i style="width:${Math.round(doneCount / items.length * 100)}%"></i></div>
+      ${items.map(i => `<button type="button" class="chk-item${i.done ? ' done' : ''}" data-action="${i.action}" ${i.key ? `data-key="${i.key}"` : ''} ${i.done ? 'disabled' : ''}><i>${i.done ? icon('check', 13) : ''}</i><span>${esc(i.label)}</span></button>`).join('')}
+      ${hasSampleData() ? `<div class="chk-sample">Sample data ang nakikita mo ngayon. <button type="button" class="btn-link" data-action="sample-clear">Burahin ang sample data</button></div>` : ''}
+    </section>`;
   }
 
   /* ---------------- settings ---------------- */
@@ -2656,7 +2793,7 @@
         </div>
         <div class="field"><label>Quotation: next step</label>${area('settings.quoteNextStep', st.quoteNextStep, '', 3)}</div>
         <div class="field"><label>Quotation: payment terms</label>${area('settings.quoteTerms', st.quoteTerms, '', 3)}</div>
-        <div class="field"><label>Contract: dagdag na terms (optional)</label>${area('settings.contractTerms', st.contractTerms, 'e.g. Ang final video ay ide-deliver within 30 days pagkatapos ng event.', 4)}</div>
+        <div class="field"><label>Contract: dagdag na terms (optional)</label>${area('settings.contractTerms', st.contractTerms, 'e.g. Ang final video ay ma deliver within 30 days pagkatapos ng event.', 4)}</div>
       </section>
 
       <section class="card">
@@ -2707,9 +2844,9 @@
 
       <section class="card">
         <div class="card-title">Features</div>
-        <div class="set-sub">Buksan lang ang kailangan mo para malinis ang app.</div>
+        <div class="set-sub">Buksan lang ang kailangan mo. Ang naka off ay hindi lalabas sa tabs at sa Home.</div>
         <div class="set-toggles">
-          ${featRow('gear', 'Gear ROI', 'Bawi na ba ang camera at lens mo?')}
+          ${SETUP_FEATURES.map(f => featRow(f.key, f.label, f.hint)).join('')}
         </div>
         <div class="field" style="margin-top:14px"><label>Yearly income goal (₱, optional)</label>${money('settings.yearlyGoal', st.yearlyGoal)}</div>
       </section>
@@ -2802,7 +2939,7 @@
                 <div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin-top:4px">${esc(b.sub)}</div>
               </div>`).join('')}
           </div>` : `<div style="font-size:13.5px;line-height:1.6;color:oklch(0.32 0.015 150)">${esc(ic.text)}</div>`;
-        const header = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="color:oklch(0.55 0.14 150)">${ic.icon}</span><div class="sg" style="font-weight:700;font-size:15px">${esc(ic.title)}</div></div>`;
+        const header = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div class="sg" style="font-weight:700;font-size:15px">${esc(ic.title)}</div></div>`;
         return ic.clickKey
           ? `<button type="button" data-action="chip-open" data-key="${ic.clickKey}" style="all:unset;cursor:pointer;box-sizing:border-box;display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px">${header}${inner}</button>`
           : `<div class="card">${header}${inner}</div>`;
@@ -2950,10 +3087,10 @@
             <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
               <input type="text" value="${esc(p)}" data-proj-idx="${i}" placeholder="e.g. Reel #${i + 1}" style="flex:1"/>
               <button type="button" data-action="shoot-project-remove" data-idx="${i}" style="all:unset;cursor:pointer;flex:none;width:34px;height:34px;border-radius:8px;background:oklch(0.95 0.02 25);color:oklch(0.5 0.18 25);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">✕</button>
-            </div>`).join('') : `<div style="font-size:12px;color:oklch(0.5 0.015 150);margin-bottom:8px">No projects yet — add one below. These become the invoice line items.</div>`}
+            </div>`).join('') : `<div style="font-size:12px;color:oklch(0.5 0.015 150);margin-bottom:8px">No projects yet, add one below. These become the invoice line items.</div>`}
             <button type="button" data-action="shoot-project-add" style="all:unset;cursor:pointer;display:block;text-align:center;box-sizing:border-box;width:100%;padding:9px;border-radius:9px;border:1.5px dashed oklch(0.5 0.13 150);background:oklch(0.97 0.02 150);color:oklch(0.4 0.13 150);font-size:12.5px;font-weight:700">＋ Add project</button>
           </div>` : (showLoc ? `<div class="field"><label>Location / Venue</label><input type="text" value="${esc(d.location)}" data-bind="draft.location" placeholder="e.g. BGC Studio"/></div>` : `<div class="field" style="margin-bottom:4px"><span data-action="shoot-loc-toggle" style="cursor:pointer;font-size:12.5px;font-weight:600;color:oklch(0.45 0.14 150);text-decoration:underline">+ Add location</span></div>`)}
-          ${isEditOnly ? `<div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin-bottom:2px">Date: <b style="color:oklch(0.32 0.02 150)">${shootDateDisplayLabel}</b> — set to the day you created this (no need to pick).</div>` : ''}
+          ${isEditOnly ? `<div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin-bottom:2px">Date: <b style="color:oklch(0.32 0.02 150)">${shootDateDisplayLabel}</b>, set to the day you created this (no need to pick).</div>` : ''}
           <div class="row-2"${isEditOnly ? ' style="display:none"' : ''}>
             <div class="field" style="position:relative">
               <label>Date</label>
@@ -3044,34 +3181,34 @@
           ${draftPaidAmount > 0 ? `
           <div style="margin-top:2px">
             ${dpField('Received on', 'draft.paidDate', d.paidDate || '', { align: 'left', placeholder: 'Same as shoot date' })}
-            <div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">When you received this payment — so it counts toward the right month's income. If left blank, the shoot date is used.</div>
+            <div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:4px">When you received this payment, so it counts toward the right month's income. If left blank, the shoot date is used.</div>
           </div>` : ''}
           ${!isForeign && draftGrandTotal > 0 ? `
           <div style="margin:-2px 0 2px">
             ${draftGrandTotal - draftPaidAmount > 0
-              ? `<button type="button" data-action="shoot-milestone-pick" data-amount="${Math.round(draftGrandTotal)}" style="all:unset;cursor:pointer;display:block;text-align:center;box-sizing:border-box;width:100%;padding:9px;border-radius:9px;border:1.5px solid oklch(0.5 0.13 150);background:oklch(0.95 0.03 150);color:oklch(0.32 0.13 150);font-size:12.5px;font-weight:700">✓ Mark as fully paid — sets received to ${draftGrandTotalLabel}</button>`
-              : `<div style="display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;width:100%;padding:9px;border-radius:9px;background:oklch(0.92 0.06 150);color:oklch(0.34 0.13 150);font-size:12.5px;font-weight:700">✓ Fully paid — no balance <button type="button" data-action="shoot-milestone-pick" data-amount="0" style="all:unset;cursor:pointer;font-size:11px;font-weight:600;color:oklch(0.5 0.015 150);text-decoration:underline">undo</button></div>`}
+              ? `<button type="button" data-action="shoot-milestone-pick" data-amount="${Math.round(draftGrandTotal)}" style="all:unset;cursor:pointer;display:block;text-align:center;box-sizing:border-box;width:100%;padding:9px;border-radius:9px;border:1.5px solid oklch(0.5 0.13 150);background:oklch(0.95 0.03 150);color:oklch(0.32 0.13 150);font-size:12.5px;font-weight:700">✓ Mark as fully paid, sets received to ${draftGrandTotalLabel}</button>`
+              : `<div style="display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;width:100%;padding:9px;border-radius:9px;background:oklch(0.92 0.06 150);color:oklch(0.34 0.13 150);font-size:12.5px;font-weight:700">✓ Fully paid, no balance <button type="button" data-action="shoot-milestone-pick" data-amount="0" style="all:unset;cursor:pointer;font-size:11px;font-weight:600;color:oklch(0.5 0.015 150);text-decoration:underline">undo</button></div>`}
           </div>` : ''}
           ${isForeign && draftUsdCharged > 0 ? `
           <div style="margin:-2px 0 2px">
             ${draftPaidAmount >= draftForeignEstPhp && draftForeignEstPhp > 0
               ? `<div style="display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;width:100%;padding:9px;border-radius:9px;background:oklch(0.92 0.06 150);color:oklch(0.34 0.13 150);font-size:12.5px;font-weight:700">✓ Marked as received <button type="button" data-action="shoot-milestone-pick" data-amount="0" style="all:unset;cursor:pointer;font-size:11px;font-weight:600;color:oklch(0.5 0.015 150);text-decoration:underline">undo</button></div>`
-              : `<button type="button" data-action="shoot-milestone-pick" data-amount="${draftForeignEstPhp}" style="all:unset;cursor:pointer;display:block;text-align:center;box-sizing:border-box;width:100%;padding:9px;border-radius:9px;border:1.5px solid oklch(0.5 0.13 150);background:oklch(0.95 0.03 150);color:oklch(0.32 0.13 150);font-size:12.5px;font-weight:700">✓ Fill ₱ Received ≈ ${fmtMoney(draftForeignEstPhp)} (from $${draftUsdCharged.toLocaleString('en-US')}) — edit to actual</button>`}
+              : `<button type="button" data-action="shoot-milestone-pick" data-amount="${draftForeignEstPhp}" style="all:unset;cursor:pointer;display:block;text-align:center;box-sizing:border-box;width:100%;padding:9px;border-radius:9px;border:1.5px solid oklch(0.5 0.13 150);background:oklch(0.95 0.03 150);color:oklch(0.32 0.13 150);font-size:12.5px;font-weight:700">✓ Fill ₱ Received ≈ ${fmtMoney(draftForeignEstPhp)} (from $${draftUsdCharged.toLocaleString('en-US')}), edit to actual</button>`}
           </div>
-          <div style="font-size:11px;color:oklch(0.5 0.015 150);margin:-1px 0 4px 2px;line-height:1.4">${usdRateIsLive ? `Live mid‑market ₱${liveUsdRate.toFixed(2)}/$1${state.usdRateDate ? ` · ${state.usdRateDate}` : ''}` : `Est. ₱${USD_TO_PHP}/$1 (offline)`} — estimate only, replace with the exact amount you received.</div>` : ''}
+          <div style="font-size:11px;color:oklch(0.5 0.015 150);margin:-1px 0 4px 2px;line-height:1.4">${usdRateIsLive ? `Live mid market ₱${liveUsdRate.toFixed(2)}/$1${state.usdRateDate ? ` · ${state.usdRateDate}` : ''}` : `Est. ₱${USD_TO_PHP}/$1 (offline)`}, estimate only, replace with the exact amount you received.</div>` : ''}
           ${isForeign ? `<div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin:-4px 0 4px 2px;line-height:1.45">In Finances, your <b style="color:oklch(0.3 0.02 150)">₱ Received</b> counts toward the totals. The <b style="color:oklch(0.3 0.02 150)">$</b> is kept as a record only.</div>` : ''}
           ${isCustomPackage ? `<div class="field"><label>Custom Package Amount (₱)</label><input type="text" inputmode="decimal" value="${esc(formatMoneyLiveDisplay(d.package))}" data-bind="draft.package" data-fmt="money" placeholder="0"/></div>` : ''}
           ${isRealEstate ? `
           <div style="background:var(--card2);border:1px solid var(--border3);border-radius:12px;padding:14px 16px">
             <button type="button" data-action="shoot-addons-toggle" style="all:unset;cursor:pointer;display:flex;align-items:center;justify-content:space-between;width:100%">
-              <span style="font-size:12.5px;font-weight:700;color:oklch(0.25 0.02 150)">Add-ons ${(!state.shootAddonsOpen && hasAddons) ? `· ${addonsTotal.toLocaleString('en-US')} added` : '(optional)'}</span>
+              <span style="font-size:12.5px;font-weight:700;color:oklch(0.25 0.02 150)">Add ons ${(!state.shootAddonsOpen && hasAddons) ? `· ${addonsTotal.toLocaleString('en-US')} added` : '(optional)'}</span>
               <span style="font-size:12px;color:oklch(0.5 0.015 150)">${state.shootAddonsOpen ? '▾' : '▸'}</span>
             </button>
             ${state.shootAddonsOpen ? `
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
               ${addonDefs().map(ad => {
                 const qty = draftAddons[ad.key] || 0;
-                const subtotalLabel = qty > 0 ? fmtMoney(qty * ad.price) : '—';
+                const subtotalLabel = qty > 0 ? fmtMoney(qty * ad.price) : '';
                 const subtotalColor = qty > 0 ? 'oklch(0.4 0.13 150)' : 'oklch(0.6 0.015 150)';
                 const counterControls = ad.flat ? `
                   <button type="button" data-action="shoot-addon-toggle" data-key="${ad.key}" style="all:unset;cursor:pointer;padding:6px 14px;border-radius:7px;font-weight:700;font-size:12.5px;background:${qty > 0 ? 'oklch(0.92 0.06 150)' : 'oklch(0.91 0.012 150)'};color:${qty > 0 ? 'oklch(0.4 0.13 150)' : 'oklch(0.4 0.02 150)'}">${qty > 0 ? 'Added ✓' : 'Add'}</button>
@@ -3093,7 +3230,7 @@
             </div>
             ${hasAddons ? `
             <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--border3)">
-              <div style="font-size:12.5px;color:oklch(0.5 0.015 150)">Add-ons Subtotal</div>
+              <div style="font-size:12.5px;color:oklch(0.5 0.015 150)">Add ons Subtotal</div>
               <div style="font-size:13px;font-weight:700;color:oklch(0.4 0.13 150)">${fmtMoney(addonsTotal)}</div>
             </div>` : ''}
             ` : ''}
@@ -3136,7 +3273,7 @@
           ${isEdit ? `
           <div style="border-top:1px solid var(--border3);margin-top:6px;padding-top:14px">
             <button type="button" data-action="shoot-create-billing" style="all:unset;cursor:pointer;display:block;text-align:center;box-sizing:border-box;width:100%;padding:11px;border-radius:10px;border:1.5px solid oklch(0.5 0.13 150);background:oklch(0.95 0.03 150);color:oklch(0.32 0.13 150);font-size:13px;font-weight:700">Create ${isForeign ? 'Invoice' : 'Statement of Account'} from this shoot</button>
-            <div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:5px;text-align:center;line-height:1.45">Pulls in the client and details — add the due date and QR in Documents.</div>
+            <div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:5px;text-align:center;line-height:1.45">Pulls in the client and details, add the due date and QR in Documents.</div>
           </div>` : ''}
         </div>
         <div class="modal-actions">
@@ -3171,10 +3308,10 @@
     const ftMonth = state.fullTimeIncome.filter(f => f.date && f.date.slice(0, 7) === mKey);
     let title = '', rows = [], totalLabel = '';
     if (key === 'remaining') {
-      title = 'Remaining Balance — ' + mLabel; totalLabel = 'Total remaining';
+      title = 'Remaining Balance · ' + mLabel; totalLabel = 'Total remaining';
       rows = monthShoots.filter(s => s.status !== 'tentative').map(s => ({ label: s.client || 'Untitled', sub: s.location || '', amount: Math.max((Number(s.package) || 0) - shootPaidTotal(s), 0) })).filter(x => x.amount > 0);
     } else if (key === 'sidehustle') {
-      title = 'Raket Collected — ' + mLabel; totalLabel = 'Total collected';
+      title = 'Raket Collected · ' + mLabel; totalLabel = 'Total collected';
       const rowsSH = [];
       state.shoots.forEach(s => {
         const ps = shootPaymentsOf(s).filter(p => (p.date || '').slice(0, 7) === mKey);
@@ -3183,17 +3320,17 @@
       });
       rows = rowsSH;
     } else if (key === 'package') {
-      title = 'Total Package Value — ' + mLabel; totalLabel = 'Total package value';
+      title = 'Total Package Value · ' + mLabel; totalLabel = 'Total package value';
       rows = monthShoots.map(s => ({ label: s.client || 'Untitled', sub: fmtDate(s.date), amount: Number(s.package) || 0 })).filter(x => x.amount > 0);
     } else if (key === 'fulltime') {
-      title = 'Full-Time Income — ' + mLabel; totalLabel = 'Total full-time';
-      rows = ftMonth.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(f => ({ label: f.source || 'Full-Time', sub: fmtDate(f.date), amount: Number(f.amount) || 0 }));
+      title = 'Full Time Income · ' + mLabel; totalLabel = 'Total full time';
+      rows = ftMonth.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(f => ({ label: f.source || 'Full Time', sub: fmtDate(f.date), amount: Number(f.amount) || 0 }));
     } else if (key === 'fulltime-all') {
-      title = 'All Full-Time Income'; totalLabel = 'Total (all-time)';
-      rows = state.fullTimeIncome.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(f => ({ label: f.source || 'Full-Time', sub: fmtDate(f.date), amount: Number(f.amount) || 0 }));
+      title = 'All Full Time Income'; totalLabel = 'Total (all time)';
+      rows = state.fullTimeIncome.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(f => ({ label: f.source || 'Full Time', sub: fmtDate(f.date), amount: Number(f.amount) || 0 }));
     } else if (key === 'combined') {
-      title = 'Combined Income — ' + mLabel; totalLabel = 'Combined total';
-      const ft = ftMonth.map(f => ({ label: f.source || 'Full-Time', sub: 'Full-Time · ' + fmtDate(f.date), amount: Number(f.amount) || 0, date: f.date }));
+      title = 'Combined Income · ' + mLabel; totalLabel = 'Combined total';
+      const ft = ftMonth.map(f => ({ label: f.source || 'Full Time', sub: 'Full Time · ' + fmtDate(f.date), amount: Number(f.amount) || 0, date: f.date }));
       const sh = [];
       state.shoots.forEach(s => {
         const ps = shootPaymentsOf(s).filter(p => (p.date || '').slice(0, 7) === mKey);
@@ -3272,7 +3409,7 @@
   function financeExportData(rangeKey) {
     const { startStr, endStr, rangeLabel } = resolveExportRange(rangeKey);
     const inRange = ds => ds && ds >= startStr && ds <= endStr;
-    const ft = state.fullTimeIncome.filter(f => inRange(f.date)).map(f => ({ date: f.date, type: 'Full-Time', label: f.source || 'Full-Time Income', amount: Number(f.amount) || 0 }));
+    const ft = state.fullTimeIncome.filter(f => inRange(f.date)).map(f => ({ date: f.date, type: 'Full Time', label: f.source || 'Full Time Income', amount: Number(f.amount) || 0 }));
     const sh = state.shoots.flatMap(s => {
       const ps = shootPaymentsOf(s).filter(p => inRange(p.date));
       if (ps.length) return ps.map(p => ({ date: p.date, type: 'Raket', label: (s.client || 'Shoot') + (p.label ? ' · ' + p.label : ''), amount: Number(p.amount) || 0 }));
@@ -3319,7 +3456,7 @@
     doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(31, 107, 64);
     doc.text('Income Report', marginX, y);
     y += 20; doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(110, 115, 110);
-    doc.text(rangeLabel + '  -  ' + startStr + ' to ' + endStr, marginX, y);
+    doc.text(rangeLabel + ' · ' + startStr + ' to ' + endStr, marginX, y);
     y += 10; doc.setDrawColor(222, 228, 222); doc.line(marginX, y, rightX, y); y += 22;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(110, 115, 110);
     doc.text('DATE', marginX, y); doc.text('TYPE', marginX + 92, y); doc.text('CLIENT / SOURCE', marginX + 188, y); doc.text('AMOUNT', rightX, y, { align: 'right' });
@@ -3355,7 +3492,7 @@
           <button type="button" class="btn-primary" style="flex:1;justify-content:center;text-align:center" data-action="finance-export-csv">Download CSV</button>
           <button type="button" style="all:unset;cursor:pointer;flex:1;text-align:center;padding:10px 16px;border-radius:9px;background:oklch(0.55 0.14 235 / 0.14);color:oklch(0.42 0.13 235);font-weight:700;font-size:13px;display:inline-flex;align-items:center;justify-content:center" data-action="finance-export-pdf">Download PDF</button>
         </div>
-        <div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin-top:12px;line-height:1.5">Income only (Full-Time + Raket collected) for the selected range. Separate from expenses.</div>
+        <div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin-top:12px;line-height:1.5">Income only (Full Time + Raket collected) for the selected range. Separate from expenses.</div>
       </div>
     </div>`;
   }
@@ -3406,7 +3543,7 @@
     doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(31, 107, 64);
     doc.text('Expense Report', marginX, y);
     y += 20; doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(110, 115, 110);
-    doc.text(rangeLabel + '  -  ' + startStr + ' to ' + endStr, marginX, y);
+    doc.text(rangeLabel + ' · ' + startStr + ' to ' + endStr, marginX, y);
     y += 10; doc.setDrawColor(222, 228, 222); doc.line(marginX, y, rightX, y); y += 22;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(110, 115, 110);
     doc.text('DATE', marginX, y); doc.text('DESCRIPTION', marginX + 92, y); doc.text('AMOUNT', rightX, y, { align: 'right' });
@@ -3511,7 +3648,7 @@
             ${remaining > 0 ? `<button type="button" data-action="shoot-payment-quick" data-amount="${remaining}" data-label="Payment" style="all:unset;cursor:pointer;padding:5px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:var(--card2);color:oklch(0.35 0.02 150)">Pay remaining (${fmtMoney(remaining)})</button>` : ''}
           </div>
           ${dpField('Date paid', 'shootPaymentDraft.date', d.date || TODAY_STR, { align: 'left' })}
-          <div style="font-size:12.5px;color:oklch(0.45 0.015 150)">New remaining: <strong>${fmtMoney(previewRemaining)}</strong>${previewRemaining === 0 && amt > 0 ? ' — Paid up ✓' : ''}</div>
+          <div style="font-size:12.5px;color:oklch(0.45 0.015 150)">New remaining: <strong>${fmtMoney(previewRemaining)}</strong>${previewRemaining === 0 && amt > 0 ? ', Paid up ✓' : ''}</div>
           ${history.length > 0 ? `
           <div style="border-top:1px solid var(--border2);padding-top:12px">
             <div style="font-size:11.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:8px">Payment History</div>
@@ -3570,7 +3707,7 @@
             <button type="button" data-action="loan-payment-quick" data-amount="${l.monthlyDue}" style="all:unset;cursor:pointer;padding:5px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:var(--card2);color:oklch(0.35 0.02 150)">Monthly Due (${fmtMoney(l.monthlyDue)})</button>
             <button type="button" data-action="loan-payment-quick" data-amount="${remaining}" style="all:unset;cursor:pointer;padding:5px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:var(--card2);color:oklch(0.35 0.02 150)">Pay Off Full (${fmtMoney(remaining)})</button>
           </div>
-          <div style="font-size:12.5px;color:oklch(0.45 0.015 150)">New balance: <strong>${fmtMoney(previewRemaining)}</strong>${previewRemaining === 0 && amt > 0 ? ' — will be marked Paid Off ✓' : ''}</div>
+          <div style="font-size:12.5px;color:oklch(0.45 0.015 150)">New balance: <strong>${fmtMoney(previewRemaining)}</strong>${previewRemaining === 0 && amt > 0 ? ', will be marked Paid Off ✓' : ''}</div>
           ${history.length > 0 ? `
           <div style="border-top:1px solid var(--border2);padding-top:12px">
             <div style="font-size:11.5px;font-weight:700;color:oklch(0.5 0.015 150);text-transform:uppercase;margin-bottom:8px">Payment History</div>
@@ -3856,7 +3993,7 @@
             <div class="field"><label>Lead Status</label>
               <select data-bind="clientDraft.leadStatus">${LEAD_STATUSES.map(v => `<option value="${v}" ${d.leadStatus === v ? 'selected' : ''}>${leadStatusLabel(v)}</option>`).join('')}</select>
             </div>
-            ${dpField('Follow-up Date', 'clientDraft.followUpDate', d.followUpDate || '', { align: 'right', future: true })}
+            ${dpField('Follow up Date', 'clientDraft.followUpDate', d.followUpDate || '', { align: 'right', future: true })}
           </div>
           <div class="field"><label>Notes</label><input type="text" value="${esc(d.notes)}" data-bind="clientDraft.notes" placeholder="Optional notes"/></div>
         </div>
@@ -4068,7 +4205,7 @@
 
       case 'dock': {
         const k = el.dataset.key;
-        const map = { home: 'dashboard', shoots: 'shoots', calendar: 'shoots', clients: 'clients', payments: 'finances', money: 'expenses', docs: 'docs' };
+        const map = { home: 'dashboard', shoots: 'shoots', calendar: 'shoots', clients: 'clients', payments: 'finances', money: moneyHomeView(), docs: 'docs' };
         const patch = { view: map[k] || 'dashboard', quickAddOpen: false, globalSearch: '', moreOpen: false, mSearchOpen: false };
         if (k === 'calendar') patch.shootsMode = 'calendar';
         if (k === 'shoots') patch.shootsMode = 'board';
@@ -4306,7 +4443,7 @@
           incomeRows.push([f.source || '', f.date || '', Number(f.amount) || 0]);
         });
 
-        const clientRows = [['Name', 'Phone', 'Email', 'Lead Status', 'Follow-up Date', 'Notes']];
+        const clientRows = [['Name', 'Phone', 'Email', 'Lead Status', 'Follow up Date', 'Notes']];
         state.clients.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach(c => {
           clientRows.push([c.name || '', c.phone || '', c.email || '', c.leadStatus || '', c.followUpDate || '', c.notes || '']);
         });
@@ -4340,6 +4477,19 @@
       case 'settings-addon-flat': setState(s => ({ settings: { ...s.settings, addons: (s.settings.addons || []).map((a, i) => i === Number(el.dataset.idx) ? { ...a, flat: !a.flat } : a) } })); break;
       case 'settings-add-milestone': setState(s => ({ settings: { ...s.settings, milestones: [...(s.settings.milestones || []), { label: '', pct: 0 }] } })); break;
       case 'settings-del-milestone': setState(s => ({ settings: { ...s.settings, milestones: (s.settings.milestones || []).filter((_, i) => i !== Number(el.dataset.idx)) } })); break;
+      case 'setup-next': {
+        setupReadInputs(); const d = setupDraft();
+        if (d.step === 2 && !d.businessName.trim()) { d.error = 'Ilagay muna ang pangalan ng business mo.'; render(); break; }
+        d.error = ''; d.step = Math.min(d.step + 1, 5); render(); break;
+      }
+      case 'setup-back': { setupReadInputs(); const d = setupDraft(); d.error = ''; d.step = Math.max(d.step - 1, 0); render(); break; }
+      case 'setup-role': { const d = setupDraft(); d.role = el.dataset.key; render(); break; }
+      case 'setup-split': { const d = setupDraft(); d.split = el.dataset.key; render(); break; }
+      case 'setup-feature': { const d = setupDraft(); d.features = { ...d.features, [el.dataset.key]: !d.features[el.dataset.key] }; render(); break; }
+      case 'setup-logo': { setupReadInputs(); pickImage(512, null, (dataUrl) => { setupDraft().logo = dataUrl; render(); }); break; }
+      case 'setup-finish': finishSetup(el.dataset.sample === '1'); break;
+      case 'checklist-hide': setSettings({ checklistHidden: true }); break;
+      case 'sample-clear': setState(s => ({ shoots: s.shoots.filter(x => !x.sample), clients: s.clients.filter(x => !x.sample), expenses: s.expenses.filter(x => !x.sample) })); break;
       case 'settings-list-add': { const k = el.dataset.list; setState(s => ({ settings: { ...s.settings, [k]: [...(s.settings[k] || []), ''] } })); break; }
       case 'settings-list-del': { const k = el.dataset.list; setState(s => ({ settings: { ...s.settings, [k]: (s.settings[k] || []).filter((_, i) => i !== Number(el.dataset.idx)) } })); break; }
       case 'settings-preset': setState({ presetConfirm: el.dataset.preset }); break;
@@ -4390,7 +4540,7 @@
           reader.onload = () => {
             let parsed;
             try { parsed = JSON.parse(reader.result); }
-            catch (err) { alert("That file isn't a valid backup — couldn't read it."); return; }
+            catch (err) { alert("That file isn't a valid backup, couldn't read it."); return; }
             const data = (parsed && parsed.data) ? parsed.data : parsed;
             const keysPresent = PERSIST_KEYS.filter(k => data && (k in data));
             if (!keysPresent.length) { alert("Hindi ito mukhang Eksakto backup file."); return; }
@@ -4754,7 +4904,7 @@
     y += 14;
 
     // Shoots by status
-    sectionTitle('Shoots this month — ' + monthShoots.length + ' total');
+    sectionTitle('Shoots this month · ' + monthShoots.length + ' total');
     if (!monthShoots.length) {
       doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(GRAY[0], GRAY[1], GRAY[2]);
       doc.text('No dated shoots this month.', marginX, y); y += 16;
@@ -4961,7 +5111,7 @@
     doc.text(pdfDocTitle.toUpperCase(), rightX, badgeY + 16, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
     doc.text(sanitizePeso(bizName()), rightX, badgeY + 30, { align: 'right' });
-    if (isInvoice) doc.text(`${pdfRefLabel} ${d.invoiceNumber || '—'}`, rightX, badgeY + 43, { align: 'right' });
+    if (isInvoice) doc.text(`${pdfRefLabel} ${d.invoiceNumber || ''}`, rightX, badgeY + 43, { align: 'right' });
 
     y = badgeY + badgeSize + 28;
 
@@ -4981,10 +5131,10 @@
     } else if (docType === 'quotation') {
       metaField('ISSUE DATE', fmtDateShortYear(d.date), 0);
       metaField('VALID UNTIL', d.dueDate ? fmtDateShortYear(d.dueDate) : 'No expiry', metaColW, BRAND);
-      metaField('PROJECT', truncate(sanitizePeso(d.description) || '—', metaColW - 16), metaColW * 2);
+      metaField('PROJECT', truncate(sanitizePeso(d.description) || '', metaColW - 16), metaColW * 2);
     } else {
       metaField('ISSUE DATE', fmtDateShortYear(d.date), 0);
-      metaField('PROJECT / SERVICE', truncate(sanitizePeso(d.description) || '—', metaColW - 16), metaColW);
+      metaField('PROJECT / SERVICE', truncate(sanitizePeso(d.description) || '', metaColW - 16), metaColW);
       metaField('DOCUMENT TYPE', 'Contract', metaColW * 2);
     }
     y += 42;
@@ -5029,7 +5179,7 @@
         ensureSpace(rowH);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...INK);
         labelLines.forEach((ln, i) => doc.text(ln, marginX + 12, y + 17 + i * 14));
-        doc.text(it.amount != null ? pdfFmtMoney(it.amount) : '—', rightX - 12, y + 17, { align: 'right' });
+        doc.text(it.amount != null ? pdfFmtMoney(it.amount) : '', rightX - 12, y + 17, { align: 'right' });
         y += rowH;
         doc.setDrawColor(...LINE); doc.setLineWidth(0.75);
         doc.line(marginX, y, rightX, y);
@@ -5435,13 +5585,6 @@
       e.preventDefault();
       const action = form.dataset.action;
       if (action === 'activate-license') { activateLicense((document.getElementById('lic-key') || {}).value); return; }
-      if (action === 'save-onboarding') {
-        const biz = (document.getElementById('ob-biz').value || '').trim();
-        const owner = (document.getElementById('ob-owner').value || '').trim();
-        if (!biz) { alertSoft('Ilagay muna ang pangalan ng business mo.'); return; }
-        setSettings({ businessName: biz, ownerName: owner, onboarded: true });
-        return;
-      }
       if (action === 'save-shoot') {
         const d = state.draft;
         if (!(d.client || '').trim()) { alert('Please enter a client / project name.'); return; }
