@@ -59,13 +59,16 @@
     const doneIdx = STATUS_META.findIndex(m => m.value === 'posted');
     extra.forEach((c, i) => STATUS_META.splice(doneIdx + i, 0, { value: c.id, label: String(c.name).trim(), base: String(c.name).trim(), color: 'oklch(0.55 0.1 230)', progress: 70, custom: true }));
   }
+  // Peso amounts: whole numbers stay whole, anything with centavos always shows two decimals.
+  function numPH(v) { const n = Math.round((Number(v) || 0) * 100) / 100; return n.toLocaleString('en-PH', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function customStages() { return (S().customStages || []).filter(c => c && c.id); }
   function expenseCategories() {
     const list = (S().expenseCategories || []).map(x => String(x || '').trim()).filter(Boolean);
     return list.concat(['Other']);
   }
   function fillTemplate(tpl, d, mf) {
-    const map = { business: bizName(), owner: ownerName() || bizName(), client: d.clientName || '[Client Name]', project: d.description || '[Project/Service]', date: d.date ? fmtDate(d.date) : '[Date]', amount: (mf || fmtMoney)(d.amount), valid: d.dueDate ? fmtDateShortYear(d.dueDate) : '' };
+    const map = { business: bizName(), owner: ownerName() || bizName(), client: d.clientName || '[Client Name]', project: d.description || '[Project/Service]', date: d.date ? fmtDateShortYear(d.date) : '[Date]', amount: (mf || fmtMoney)(d.amount), valid: d.dueDate ? fmtDateShortYear(d.dueDate) : '' };
     return String(tpl || '').replace(/\{(\w+)\}/g, (m, k) => (k in map ? map[k] : m));
   }
   function isOthersType(t) { return /^(others?|iba pa)$/i.test(String(t || '').trim()); }
@@ -582,7 +585,7 @@
     return {
       view: 'dashboard',
       mobileNavOpen: false,
-      sidebarCollapsed: localStorage.getItem('shoottracker_sidebar_collapsed') === '1',
+      sidebarCollapsed: lsGet('shoottracker_sidebar_collapsed') === '1',
       shoots: [],
       expenses: [],
       loans: [],
@@ -650,12 +653,12 @@
       gearDraft: null,
       gearSearch: '',
       docType: 'contract',
-      invoiceCounter: Number(localStorage.getItem('shoottracker_invoice_counter')) || 1,
-      usdRate: (() => { try { return Number(localStorage.getItem('pol_usd_rate')) || 0; } catch (e) { return 0; } })(),
-      usdRateDate: (() => { try { return localStorage.getItem('pol_usd_rate_date') || ''; } catch (e) { return ''; } })(),
+      invoiceCounter: Number(lsGet('shoottracker_invoice_counter')) || 1,
+      usdRate: (() => { try { return Number(lsGet('pol_usd_rate')) || 0; } catch (e) { return 0; } })(),
+      usdRateDate: (() => { try { return lsGet('pol_usd_rate_date') || ''; } catch (e) { return ''; } })(),
       docDatePickerOpen: false, docDateCalYear: TODAY.getFullYear(), docDateCalMonth: TODAY.getMonth(),
       docDuePickerOpen: false, docDueCalYear: TODAY.getFullYear(), docDueCalMonth: TODAY.getMonth(),
-      docDraft: blankDocDraft(formatInvoiceNumber(Number(localStorage.getItem('shoottracker_invoice_counter')) || 1, 'soa')),
+      docDraft: blankDocDraft(formatInvoiceNumber(Number(lsGet('shoottracker_invoice_counter')) || 1, 'soa')),
       documents: [],
       docsHistoryOpen: false,
       editingDocId: null,
@@ -673,7 +676,7 @@
 
   const DATA_KEY = 'eksakto_data_v1';
   function readLocalData() {
-    try { const raw = localStorage.getItem(DATA_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+    try { const raw = lsGet(DATA_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   }
   // Copy a saved data object into state, applying the same normalizations used on load.
   function applyPersistedData(saved) {
@@ -681,6 +684,9 @@
     PERSIST_KEYS.forEach(k => {
       let val = data[k];
       if (val == null) return;
+      // Skip anything with the wrong shape so a bad file can never brick the app.
+      if (k === 'settings') { if (typeof val !== 'object' || Array.isArray(val)) return; }
+      else { if (!Array.isArray(val)) return; val = val.filter(x => x && typeof x === 'object' && !Array.isArray(x)); }
       if (k === 'shoots') {
         val = val.map(sh => ({
           ...sh,
@@ -879,7 +885,7 @@
   function markBackupDone() { try { localStorage.setItem(BACKUP_KEY, TODAY_STR); } catch (e) { /* storage unavailable */ } }
   function daysSinceBackup() {
     let last = null;
-    try { last = localStorage.getItem(BACKUP_KEY); } catch (e) { /* storage unavailable */ }
+    try { last = lsGet(BACKUP_KEY); } catch (e) { /* storage unavailable */ }
     if (!last) return null; // never backed up
     const d = Math.floor((new Date(TODAY_STR + 'T00:00:00') - new Date(last + 'T00:00:00')) / 86400000);
     return isNaN(d) ? null : d;
@@ -1319,7 +1325,11 @@
     const dashNetProfit = dashMonthlyRevenue - dashMonthExpenses;
 
     const yearlyGoalIncome = Number(S().yearlyGoal) || 0;
-    const yearlyProgressPercent = yearlyGoalIncome > 0 ? Math.min(100, Math.round((combinedTotal / yearlyGoalIncome) * 100)) : 0;
+    // This calendar year only: salary entries and shoot payments dated this year.
+    const yearKey = TODAY_STR.slice(0, 4);
+    const yearShootIncome = state.shoots.reduce((sum, sh) => sum + (shootPaymentsOf(sh).length ? shootPaymentsOf(sh) : [{ amount: Number(sh.paid) || 0, date: sh.paidDate || sh.date || '' }]).filter(p => (p.date || '').slice(0, 4) === yearKey).reduce((a, p) => a + (Number(p.amount) || 0), 0), 0);
+    const yearSalary = !feat('salary') ? 0 : (state.fullTimeIncome || []).filter(f => (f.date || '').slice(0, 4) === yearKey).reduce((a, f) => a + (Number(f.amount) || 0), 0);
+    const yearlyProgressPercent = yearlyGoalIncome > 0 ? Math.min(100, Math.round(((yearShootIncome + yearSalary) / yearlyGoalIncome) * 100)) : 0;
 
     const userFirstName = (ownerName().split(' ')[0]) || 'there';
     const liveDateTimeLabel = new Date().toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -1374,7 +1384,7 @@
       outstandingBalances: {
         title: 'Outstanding Balances',
         items: shoots
-          .filter(s => (Number(s.package) || 0) - (Number(s.paid) || 0) > 0)
+          .filter(s => s.status !== 'tentative' && (Number(s.package) || 0) - (Number(s.paid) || 0) > 0)
           .sort((a, b) => ((Number(b.package) || 0) - (Number(b.paid) || 0)) - ((Number(a.package) || 0) - (Number(a.paid) || 0)))
           .map(s => ({ primary: s.client, secondary: fmtMoney((Number(s.package) || 0) - (Number(s.paid) || 0)) })),
       },
@@ -2205,7 +2215,7 @@
           </div>
           <div>${badge(leadStatusLabel(c.leadStatus), c.statusColor, c.statusBg)}</div>
         </div>`).join('')}
-      ${ctx.clientRows.length === 0 ? `<div style="padding:24px 20px;color:oklch(0.55 0.015 150);font-size:13.5px">No clients match your search.</div>` : ''}
+      ${ctx.clientRows.length === 0 ? `<div style="padding:24px 20px;color:oklch(0.55 0.015 150);font-size:13.5px">${state.clientsSearch ? 'Walang client na tugma sa hinahanap mo.' : 'Wala ka pang client. Pindutin ang + para magdagdag.'}</div>` : ''}
     </div>`;
   }
 
@@ -2535,7 +2545,20 @@
   const LICENSE_API = { url: 'https://edngzvnyajxudvbzmalg.supabase.co', key: 'sb_publishable_N3xc7VenyA933795z5Jsdw_Ud9pXhdf' };
   const LICENSE_LS = 'eksakto_license';
   const LICENSE_REQUIRED = location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && !location.pathname.startsWith('/beta');
-  function readLicense() { try { return JSON.parse(localStorage.getItem(LICENSE_LS) || 'null'); } catch (e) { return null; } }
+  // Each browser gets a random id so a key can be limited to 3 devices.
+  function deviceId() {
+    let id = lsGet('eksakto_device_id');
+    if (!id) { id = 'd_' + Math.random().toString(36).slice(2) + Date.now().toString(36); try { localStorage.setItem('eksakto_device_id', id); } catch (e) { /* storage blocked */ } }
+    return id;
+  }
+  function deviceLabel() {
+    const ua = navigator.userAgent || '';
+    const os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : 'Device';
+    const br = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /Firefox\//.test(ua) ? 'Firefox' : '';
+    return (os + (br ? ' · ' + br : '')).slice(0, 80);
+  }
+  const DEVICE_LIMIT_MSG = 'Nagamit na ang key na ito sa 3 device. Buksan ang Eksakto sa isa sa mga device na yun, pumunta sa Settings at pindutin ang "Alisin ang license sa device na ito". Kung wala na sayo ang device, mag email sa eksakto.app@gmail.com.';
+  function readLicense() { try { return JSON.parse(lsGet(LICENSE_LS) || 'null'); } catch (e) { return null; } }
   function hasLicense() { const l = readLicense(); return !!(l && l.key && l.ok); }
   // A buyer coming from the checkout success page lands on /app/?key=EKS-XXXX-XXXX, so prefill it.
   const urlKey = (() => { try { const k = new URLSearchParams(location.search).get('key'); if (k) history.replaceState(null, '', location.pathname + location.hash); return k ? k.toUpperCase() : ''; } catch (e) { return ''; } })();
@@ -2550,14 +2573,14 @@
     const last = Date.parse(l.checkedAt || l.at || 0) || 0;
     if (Date.now() - last < LICENSE_RECHECK_MS) return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
-    fetch(LICENSE_API.url + '/rest/v1/rpc/check_license', { method: 'POST', headers: { apikey: LICENSE_API.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: l.key }) })
+    fetch(LICENSE_API.url + '/rest/v1/rpc/check_license_v2', { method: 'POST', headers: { apikey: LICENSE_API.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: l.key, p_device: deviceId() }) })
       .then(r => r.ok ? r.json() : null)
       .then(r => {
         if (!r) return;
         if (r.ok) { try { localStorage.setItem(LICENSE_LS, JSON.stringify({ ...l, checkedAt: new Date().toISOString() })); } catch (e) { /* storage blocked */ } return; }
-        if (r.reason === 'revoked' || r.reason === 'not_found') {
+        if (r.reason === 'revoked' || r.reason === 'not_found' || r.reason === 'device_limit') {
           try { localStorage.removeItem(LICENSE_LS); } catch (e) { /* storage blocked */ }
-          licenseState = { key: '', busy: false, error: 'Na deactivate na ang license key sa device na ito, halimbawa dahil na refund na. Kung sa tingin mo ay mali ito, mag email sa eksakto.app@gmail.com. Safe pa rin ang data mo sa device na ito.' };
+          licenseState = { key: r.reason === 'device_limit' ? l.key : '', busy: false, error: r.reason === 'device_limit' ? 'Tinanggal na ang device na ito sa license mo. ' + DEVICE_LIMIT_MSG + ' Safe pa rin ang data mo dito.' : 'Na deactivate na ang license key sa device na ito, halimbawa dahil na refund na o napalitan ng bagong key. Kung sa tingin mo ay mali ito, mag email sa eksakto.app@gmail.com. Safe pa rin ang data mo sa device na ito.' };
           render();
         }
       })
@@ -2622,7 +2645,7 @@
     key = String(key || '').trim().toUpperCase();
     if (!/^EKS-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key)) { licenseState = { key, busy: false, error: 'Mukhang mali ang format. Ganito dapat: EKS-XXXX-XXXX' }; render(); return; }
     licenseState = { key, busy: true, error: '' }; render();
-    fetch(LICENSE_API.url + '/rest/v1/rpc/activate_license', { method: 'POST', headers: { apikey: LICENSE_API.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: key }) })
+    fetch(LICENSE_API.url + '/rest/v1/rpc/activate_license_v2', { method: 'POST', headers: { apikey: LICENSE_API.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: key, p_device: deviceId(), p_label: deviceLabel() }) })
       .then(r => r.json())
       .then(r => {
         if (r && r.ok) {
@@ -2630,7 +2653,8 @@
           licenseState = { busy: false, error: '' };
           if (r.name && !S().ownerName) setSettings({ ownerName: r.name }); else render();
         } else {
-          licenseState = { key, busy: false, error: 'Hindi valid ang key na yan. Pakicheck, o mag email sa eksakto.app@gmail.com.' }; render();
+          const why = r && r.reason;
+          licenseState = { key, busy: false, error: why === 'device_limit' ? DEVICE_LIMIT_MSG : why === 'revoked' ? 'Hindi na active ang key na ito (na refund o napalitan na). Mag email sa eksakto.app@gmail.com kung may tanong.' : 'Hindi valid ang key na yan. Pakicheck, o mag email sa eksakto.app@gmail.com.' }; render();
         }
       })
       .catch(() => { licenseState = { key, busy: false, error: 'Kailangan ng internet para ma activate. Subukan ulit.' }; render(); });
@@ -2669,7 +2693,8 @@
       body = `<div class="su-hero"><span class="su-logo-word">eksakto<span>.</span></span></div>
         <h2 class="su-title">Buuin natin ang tracker mo.</h2>
         <p class="su-sub">Ilang tanong lang, mga isang minuto. Base sa sagot mo, ilalagay namin ang mga kailangan mo at itatago ang hindi.</p>`;
-      next = `<button type="button" class="btn-primary su-next" data-action="setup-next">Simulan</button>`;
+      next = `<button type="button" class="btn-primary su-next" data-action="setup-next">Simulan</button>
+        <button type="button" class="btn-link" data-action="backup-restore" style="display:block;margin:12px auto 0;font-size:13px">May backup ka na? I restore dito</button>`;
     } else if (d.step === 1) {
       body = `<h2 class="su-title">Ano ang raket mo?</h2><p class="su-sub">Lalagyan namin ng sample na packages at klase ng project. Pwede mong palitan lahat mamaya.</p>
         <div class="su-list">
@@ -2687,7 +2712,7 @@
         ${d.error ? `<div class="su-err">${esc(d.error)}</div>` : ''}`;
       next = `<button type="button" class="btn-primary su-next" data-action="setup-next">Next</button>`;
     } else if (d.step === 3) {
-      body = `<h2 class="su-title">Paano ka nagpapabayad?</h2><p class="su-sub">Ito ang gagamitin sa singilan at SOA. Pwedeng baguhin sa Settings.</p>
+      body = `<h2 class="su-title">Paano ka nagpapabayad?</h2><p class="su-sub">Ito ang gagamitin sa client payments at SOA. Pwedeng baguhin sa Settings.</p>
         <div class="su-list">${Object.keys(SETUP_SPLITS).map(k => choice('setup-split', k, d.split === k, SETUP_SPLITS[k].label, SETUP_SPLITS[k].hint, 'payments')).join('')}</div>`;
       next = `<button type="button" class="btn-primary su-next" data-action="setup-next">Next</button>`;
     } else if (d.step === 4) {
@@ -2771,7 +2796,7 @@
       { done: real.some(x => (Number(x.paid) || 0) > 0), label: 'Mag log ng bayad ng client', action: 'dock', key: 'payments' },
     ];
     if (feat('docs')) items.push({ done: (state.documents || []).length > 0, label: 'Gumawa ng quotation o SOA', action: 'dock', key: 'docs' });
-    items.push({ done: !!localStorage.getItem('shoottracker_last_backup'), label: 'Mag backup sa Google Drive', action: 'backup-drive' });
+    items.push({ done: !!lsGet('shoottracker_last_backup'), label: 'Mag backup sa Google Drive', action: 'backup-drive' });
     const doneCount = items.filter(i => i.done).length;
     if (doneCount === items.length && !hasSampleData()) return '';
     return `
@@ -2796,7 +2821,7 @@
       return `<button type="button" class="set-toggle" data-action="settings-feature" data-feat="${key}" aria-pressed="${on}">
         <span><b>${label}</b><small>${hint}</small></span><span class="sw${on ? ' on' : ''}" aria-hidden="true"><span></span></span></button>`;
     };
-    const lastBackup = (() => { try { return localStorage.getItem('shoottracker_last_backup') || ''; } catch (e) { return ''; } })();
+    const lastBackup = (() => { try { return lsGet('shoottracker_last_backup') || ''; } catch (e) { return ''; } })();
     return `
     <div class="page-head"><div><h1 class="page-title">Settings</h1><div class="page-sub">Ang business mo, presyo mo, at ang data mo.</div></div></div>
     <div class="set-grid">
@@ -2846,7 +2871,7 @@
 
       <section class="card">
         <div class="card-title">Hatian ng bayad</div>
-        <div class="set-sub">Paano hinahati ang bayad ng client. Ito ang gagamitin sa singilan at SOA.</div>
+        <div class="set-sub">Paano hinahati ang bayad ng client. Ito ang gagamitin sa client payments at SOA.</div>
         <div class="set-rows">
           ${(st.milestones || []).map((m, i) => `
           <div class="set-row"><div class="field"><label>Pangalan</label>${text(`settings.milestones.${i}.label`, m.label, 'e.g. Down Payment')}</div><div class="field" style="max-width:110px"><label>Percent</label><input type="text" inputmode="numeric" value="${esc(m.pct)}" data-bind="settings.milestones.${i}.pct" data-fmt="money"/></div>${delBtn('settings-del-milestone', i)}</div>`).join('')}
@@ -2940,6 +2965,15 @@
           <span style="font-size:12.5px;color:var(--text-dim)">${lastBackup ? 'Huling backup: ' + esc(fmtDate(lastBackup.slice(0, 10))) : 'Wala ka pang backup.'}</span>
         </div>
       </section>
+      ${LICENSE_REQUIRED && hasLicense() ? (() => { const l = readLicense() || {}; const k = String(l.key || ''); const masked = k ? k.slice(0, 4) + '••••' + k.slice(-4) : ''; return `
+      <section class="card set-wide">
+        <div class="card-title">License</div>
+        <div class="set-sub">Naka activate ang Eksakto sa device na ito${l.name ? ' para kay ' + esc(l.name) : ''}. Key: <b style="font-family:monospace">${esc(masked)}</b></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="btn-ghost" data-action="license-signout">${icon('close', 16)} Alisin ang license sa device na ito</button>
+          <span style="font-size:12.5px;color:var(--text-dim)">Hanggang 3 device ang isang key. Gamitin ito para ilipat ang license sa ibang device, o kung ibebenta mo ang device na ito. Mag backup muna.</span>
+        </div>
+      </section>`; })() : ''}
     </div>`;
   }
 
@@ -3440,7 +3474,7 @@
   function pad2(n) { return String(n).padStart(2, '0'); }
   function fmtDateStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
   // Default custom window: start of the current month to today.
-  function defaultCustomFrom() { return new Date(TODAY.getFullYear(), TODAY.getMonth(), 1).toISOString().slice(0, 7) + '-01'; }
+  function defaultCustomFrom() { return fmtDateStr(new Date(TODAY.getFullYear(), TODAY.getMonth(), 1)); }
 
   // Turn a range key into concrete start/end date strings + a human label. Shared so Income
   // and Expenses behave identically. Rolling presets end today; This/Last Year and Custom
@@ -3545,7 +3579,7 @@
     const { rows, total, rangeLabel, startStr, endStr } = financeExportData(state.financeExportRange);
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const PAGE_W = 612, PAGE_H = 792, marginX = 56, rightX = PAGE_W - marginX;
-    const money = n => 'PHP ' + (Number(n) || 0).toLocaleString('en-PH');
+    const money = n => 'PHP ' + numPH(n);
     let y = 64;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(31, 107, 64);
     doc.text('Income Report', marginX, y);
@@ -3632,7 +3666,7 @@
     const { items, total, rangeLabel, startStr, endStr } = expenseExportData(state.expenseExportRange);
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const PAGE_W = 612, PAGE_H = 792, marginX = 56, rightX = PAGE_W - marginX;
-    const money = n => 'PHP ' + (Number(n) || 0).toLocaleString('en-PH');
+    const money = n => 'PHP ' + numPH(n);
     let y = 64;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(31, 107, 64);
     doc.text('Expense Report', marginX, y);
@@ -3720,11 +3754,9 @@
     const amt = Number(d.amount) || 0;
     const previewRemaining = Math.max(0, remaining - amt);
     const history = shootPaymentsOf(s).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || ''));
-    const quick = [
-      { label: 'DP 20%', amount: Math.round(pkg * 0.2) },
-      { label: 'After Shoot 30%', amount: Math.round(pkg * 0.3) },
-      { label: 'Final 50%', amount: Math.round(pkg * 0.5) },
-    ];
+    // Quick amounts follow the payment schedule in Settings, plus the exact remaining balance.
+    const quick = milestoneDefs().map(m => ({ label: m.shortLabel, amount: Math.round(pkg * m.weight / 100) }))
+      .concat(remaining > 0 ? [{ label: 'Buong balance', amount: remaining }] : []);
     return `
     <div class="modal-backdrop chip" data-action="modal-backdrop-close" data-which="shootpayment">
       <form class="modal-box" style="width:380px" data-stop data-action="save-shoot-payment">
@@ -4599,6 +4631,19 @@
       case 'setup-finish': finishSetup(el.dataset.sample === '1'); break;
       case 'checklist-hide': setSettings({ checklistHidden: true }); break;
       case 'sample-clear': setState(s => ({ shoots: s.shoots.filter(x => !x.sample), clients: s.clients.filter(x => !x.sample), expenses: s.expenses.filter(x => !x.sample) })); break;
+      case 'license-signout': {
+        if (!confirm('Alisin ang license sa device na ito? Kakailanganin mo ulit ang license key para mabuksan ang Eksakto dito. Mananatili ang data mo sa device na ito, pero mag backup ka muna para sigurado.')) break;
+        if (!confirm('Siguradong aalisin? Kung ibebenta o ipapahiram mo ang device, burahin din ang data sa browser settings pagkatapos.')) break;
+        const cur = readLicense();
+        if (cur && cur.key) {
+          // Free this device's slot so the key can be used on another device.
+          try { fetch(LICENSE_API.url + '/rest/v1/rpc/release_device', { method: 'POST', keepalive: true, headers: { apikey: LICENSE_API.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: cur.key, p_device: deviceId() }) }).catch(() => {}); } catch (e) { /* offline */ }
+        }
+        try { localStorage.removeItem(LICENSE_LS); } catch (e) { /* storage blocked */ }
+        licenseState = { key: '', busy: false, error: '' };
+        render();
+        break;
+      }
       case 'backup-guide-close': setState({ backupGuide: null }); break;
       case 'backup-guide-open': setTimeout(() => setState({ backupGuide: null }), 400); break;
       case 'settings-stage-add': setState(s => ({ settings: { ...s.settings, customStages: [...(s.settings.customStages || []), { id: 'c_' + Date.now().toString(36), name: '' }] } })); break;
@@ -4674,13 +4719,21 @@
             let parsed;
             try { parsed = JSON.parse(reader.result); }
             catch (err) { alert("Hindi mabasa ang file na ito. Siguraduhin mong Eksakto backup file ang pinili mo."); return; }
-            const data = (parsed && parsed.data) ? parsed.data : parsed;
-            const keysPresent = PERSIST_KEYS.filter(k => data && (k in data));
-            if (!keysPresent.length) { alert("Hindi ito mukhang Eksakto backup file."); return; }
+            const data = (parsed && parsed.data && typeof parsed.data === 'object') ? parsed.data : parsed;
+            const okShape = (k) => k === 'settings' ? (data[k] && typeof data[k] === 'object' && !Array.isArray(data[k])) : Array.isArray(data[k]);
+            const keysPresent = PERSIST_KEYS.filter(k => data && typeof data === 'object' && (k in data));
+            const keysValid = keysPresent.filter(okShape);
+            if (!keysValid.length || keysValid.length < keysPresent.length) { alert("Hindi ito mukhang Eksakto backup file, o sira ang laman nito. Walang binago sa data mo."); return; }
             if (!confirm('I restore ang backup na ito? Papalitan nito ang lahat ng data mo ngayon sa device na ito, at hindi na ito maibabalik.')) return;
-            const patch = {};
-            keysPresent.forEach(k => { patch[k] = data[k]; });
-            setState(patch);
+            // Replace everything: collections not in the file become empty, settings get defaults merged in.
+            const full = {};
+            PERSIST_KEYS.forEach(k => { full[k] = k in data ? data[k] : (k === 'settings' ? {} : []); });
+            const hasContent = ['shoots', 'clients', 'expenses', 'documents'].some(k => (full[k] || []).length) || (full.settings && full.settings.businessName);
+            if (hasContent) full.settings = { ...full.settings, onboarded: true };
+            PERSIST_KEYS.forEach(k => { state = { ...state, [k]: k === 'settings' ? defaultSettings() : [] }; });
+            applyPersistedData({ data: full });
+            writeLocalNow();
+            setState({ view: 'dashboard' });
             showToast('Na restore na ang backup mo.');
           };
           reader.readAsText(file);
@@ -4803,7 +4856,7 @@
       case 'doc-billing-kind': setState(s => {
         const kind = el.dataset.kind === 'invoice' ? 'invoice' : 'soa';
         const prefix = kind === 'invoice' ? 'INV' : 'SOA';
-        const swapped = (s.docDraft.invoiceNumber || '').replace(/^(SOA|INV)-/, prefix + '-');
+        const swapped = (s.docDraft.invoiceNumber || '').replace(/^(SOA|INV)([- ])/, prefix + '$2');
         return { docDraft: { ...s.docDraft, billingKind: kind, invoiceNumber: swapped || nextInvoiceNumber(s, kind) } };
       }); break;
       case 'doc-qr-include': setState(s => ({ docDraft: { ...s.docDraft, includeQr: s.docDraft.includeQr === false } })); break;
@@ -4985,7 +5038,7 @@
     let y = 0;
     const ensureSpace = (needed) => { if (y + needed > PAGE_H - 56) { doc.addPage(); y = 56; } };
     // Helvetica has no ₱ glyph — use a plain "PHP " prefix so widths measure correctly.
-    const money = (n) => 'PHP ' + (Number(n) || 0).toLocaleString('en-PH');
+    const money = (n) => 'PHP ' + numPH(n);
 
     const monthKey = THIS_MONTH_KEY;
     const monthLabel = new Date(monthKey + '-01T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -5033,7 +5086,7 @@
     kv('Outstanding balance', money(outstanding));
     kv('Expenses', money(expenses));
     doc.setDrawColor(LINE[0], LINE[1], LINE[2]); doc.line(marginX, y - 2, rightX, y - 2); y += 12;
-    kv('Net (collected − expenses)', money(net), { bold: true, brand: true });
+    kv('Net (collected minus expenses)', money(net), { bold: true, brand: true });
     y += 14;
 
     // Shoots by status
@@ -5112,11 +5165,14 @@
     // Invoices can be billed in USD for foreign clients. The "$" glyph exists in the standard
     // PDF fonts, so USD amounts render directly; PHP still needs the "PHP" prefix / hand-drawn ₱.
     const isUSD = isInvoice && d.currency === 'USD';
-    const pdfFmtMoney = (n) => (isUSD ? '$' : 'PHP ') + (Number(n) || 0).toLocaleString(isUSD ? 'en-US' : 'en-PH');
+    const pdfFmtMoney = (n) => (isUSD ? '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: (Number(n) || 0) % 1 ? 2 : 0, maximumFractionDigits: 2 }) : 'PHP ' + numPH(n));
     // Any free-text field (line items, payment details, notes) can contain a real ₱ character
     // typed by the user or embedded by the app's own fmtMoney() helper — same font problem as
     // above, so strip it before it ever reaches doc.text()/splitTextToSize().
-    const sanitizePeso = (s) => String(s || '').replace(/₱/g, 'PHP ');
+    // The built in PDF font only knows Latin 1 plus a few extras (WinAnsi). Swap or drop anything else.
+    const WINANSI_EXTRA = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
+    const sanitizePeso = (s) => String(s || '').replace(/₱/g, 'PHP ').replace(/[\u2010-\u2015\u2212]/g, '-')
+      .replace(/[^\x00-\xFF]/g, ch => WINANSI_EXTRA.includes(ch) ? ch : '');
     // splitTextToSize doesn't respect embedded "\n" as real line breaks — it treats the whole
     // string as one paragraph and only wraps at the given width, collapsing intentional line
     // breaks (e.g. between breakdown items) into a single run-on line. Split on "\n" ourselves
@@ -5138,7 +5194,7 @@
       const barX0 = x - fontSize * 0.10, barX1 = x + pW * 0.60;
       doc.line(barX0, yPos - fontSize * 0.52, barX1, yPos - fontSize * 0.52);
       doc.line(barX0, yPos - fontSize * 0.37, barX1, yPos - fontSize * 0.37);
-      const amtStr = (Number(amount) || 0).toLocaleString('en-PH');
+      const amtStr = numPH(amount);
       doc.text(amtStr, x + pW + fontSize * 0.1, yPos);
       return x + pW + fontSize * 0.1 + doc.getTextWidth(amtStr);
     };
@@ -5148,7 +5204,7 @@
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
       doc.setFontSize(fontSize);
       const pW = doc.getTextWidth('P');
-      const amtStr = (Number(amount) || 0).toLocaleString('en-PH');
+      const amtStr = numPH(amount);
       return pW + fontSize * 0.1 + doc.getTextWidth(amtStr);
     };
     // Currency-aware wrappers for prominent standalone amounts: USD draws a normal "$1,234"
@@ -5281,8 +5337,14 @@
     doc.text(docType === 'quotation' ? 'PREPARED FOR' : 'BILLED TO', col2X, y);
     y += 16;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...INK);
-    doc.text(sanitizePeso(ownerName() || bizName()), marginX, y);
-    doc.text(sanitizePeso(d.clientName) || '[Client Name]', col2X, y);
+    {
+      // Long names wrap inside their own column instead of running off the page.
+      const byL = doc.splitTextToSize(sanitizePeso(ownerName() || bizName()), colW);
+      const toL = doc.splitTextToSize(sanitizePeso(d.clientName) || '[Client Name]', colW);
+      byL.forEach((ln, i) => doc.text(ln, marginX, y + i * 14));
+      toL.forEach((ln, i) => doc.text(ln, col2X, y + i * 14));
+      y += (Math.max(byL.length, toL.length) - 1) * 14;
+    }
     y += 15;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
     const byLines = [S().tagline, S().contactLine].filter(Boolean).map(t => sanitizePeso(t));
@@ -5446,6 +5508,7 @@
       drawPeso(d.amount, boxX + 16, y + 44, 20, INK, true);
       y += 56 + 24;
       // Next Step — green-tinted box with a left accent bar
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
       const nsLines = doc.splitTextToSize(sanitizePeso(S().quoteNextStep || ''), contentW - 32);
       const nsH = nsLines.length * 13 + 32;
       ensureSpace(nsH + 10);
@@ -5497,10 +5560,12 @@
       doc.line(marginX + sigW + 24, y, marginX + sigW + 24 + sigW, y);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
       doc.text('Client Signature', marginX, y + 14);
-      doc.text(sanitizePeso(bizName()), marginX + sigW + 24, y + 14);
-      doc.text(`Printed Name: ${d.clientName || '_______________'}`, marginX, y + 28);
-      doc.text(`Printed Name: ${sanitizePeso(ownerName()) || '_______________'}`, marginX + sigW + 24, y + 28);
-      y += 44;
+      doc.text(doc.splitTextToSize(sanitizePeso(bizName()), sigW)[0], marginX + sigW + 24, y + 14);
+      const pnL = doc.splitTextToSize(`Printed Name: ${sanitizePeso(d.clientName) || '_______________'}`, sigW);
+      const pnR = doc.splitTextToSize(`Printed Name: ${sanitizePeso(ownerName()) || '_______________'}`, sigW);
+      pnL.forEach((ln, i) => doc.text(ln, marginX, y + 28 + i * 12));
+      pnR.forEach((ln, i) => doc.text(ln, marginX + sigW + 24, y + 28 + i * 12));
+      y += 44 + (Math.max(pnL.length, pnR.length) - 1) * 12;
     }
 
     // ---- footer ----
@@ -5835,6 +5900,11 @@
         if (payDate > TODAY_STR) { alert('Payment date cannot be in the future.'); return; }
         const payLabel = pd.label || 'Payment';
         if (state.shootPaymentModal) {
+          const tgt = state.shootPaymentModal.id ? state.shoots.find(x => x.id === state.shootPaymentModal.id) : null;
+          if (tgt) {
+            const left = Math.max(0, (Number(tgt.package) || 0) - shootPaidTotal(tgt));
+            if (amt > left + 0.005 && !confirm('Mas malaki ang ₱' + amt.toLocaleString('en-US') + ' kaysa sa natitirang balance na ₱' + left.toLocaleString('en-US') + '. I save pa rin? (Halimbawa kung may dagdag na bayad o tip.)')) return;
+          }
           const targetId = state.shootPaymentModal.id;
           setState(s => ({
             shoots: s.shoots.map(sh => {
@@ -5887,7 +5957,20 @@
         if (!(d.name || '').trim()) { alert('Please enter a client name.'); return; }
         setState(s => s.clientModal.mode === 'add'
           ? { clients: [...s.clients, { ...d, id: 'c' + Date.now() }], clientModal: null, clientDraft: null }
-          : { clients: s.clients.map(c => c.id === d.id ? d : c), clientModal: null, clientDraft: null });
+          : (() => {
+            // Renaming a client also renames their shoots and documents, which are linked by name.
+            const prev = s.clients.find(c => c.id === d.id);
+            const oldKey = ((prev && prev.name) || '').trim().toLowerCase();
+            const newName = (d.name || '').trim();
+            const renamed = oldKey && oldKey !== newName.toLowerCase();
+            const same = (v) => renamed && String(v || '').trim().toLowerCase() === oldKey;
+            return {
+              clients: s.clients.map(c => c.id === d.id ? { ...d, name: newName } : c),
+              shoots: renamed ? s.shoots.map(sh => same(sh.client) ? { ...sh, client: newName } : sh) : s.shoots,
+              documents: renamed ? (s.documents || []).map(doc => same(doc.clientName) ? { ...doc, clientName: newName } : doc) : s.documents,
+              clientModal: null, clientDraft: null,
+            };
+          })());
       } else if (action === 'save-gear') {
         const d = state.gearDraft;
         if (!(d.name || '').trim()) { alert('Please enter the gear name.'); return; }
@@ -5918,6 +6001,8 @@
       // Never re-render under someone who is typing; it would wipe unsaved fields or steal focus.
       const a = document.activeElement;
       if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+      // A new day started while the app was open: reload so "today", this month and badges are fresh.
+      if (todayStr() !== TODAY_STR && !state.modal && !document.querySelector('.modal-backdrop')) { location.reload(); return; }
       render();
     }, 30000);
   }
@@ -5950,7 +6035,7 @@
 
     // Restore last-viewed page (per-device) so a refresh doesn't bounce you back to Dashboard.
     try {
-      const savedView = localStorage.getItem('shoottracker_last_view');
+      const savedView = lsGet('shoottracker_last_view');
       if (savedView && VALID_VIEWS.includes(savedView)) {
         state = { ...state, view: savedView };
       }
@@ -5966,7 +6051,7 @@
   // rate, then to USD_TO_PHP, so nothing breaks without a network.
   async function refreshUsdRate() {
     try {
-      const ts = Number(localStorage.getItem('pol_usd_rate_ts') || 0);
+      const ts = Number(lsGet('pol_usd_rate_ts') || 0);
       if (state.usdRate > 0 && (Date.now() - ts) < 12 * 3600 * 1000) return; // still fresh
     } catch (e) { /* ignore */ }
     const sources = [
