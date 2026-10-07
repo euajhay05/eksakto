@@ -1,6 +1,6 @@
 // Eksakto service worker: makes the app open even without internet.
 // Bump VERSION on every release so phones pick up the new files.
-const VERSION = 'eksakto-v7';
+const VERSION = 'eksakto-v9';
 const SHELL = ['./', './index.html', './app.js', './manifest.json', './favicon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
