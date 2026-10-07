@@ -33,6 +33,7 @@
     plus: '<path d="M12 5v14M5 12h14"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
     upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
+    cloud: '<path d="M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9H7z"/><path d="M12 16v-5M9.5 13.5 12 11l2.5 2.5"/>',
     download: '<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',
     receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
@@ -1630,9 +1631,9 @@
 
     ${ctx.showBackupReminder && !homeChecklist() ? `
     <div class="notice">
-      <span><b>Backup reminder.</b> ${esc(ctx.backupReminderLabel)} Mag download ng kopya para sigurado.</span>
+      <span><b>Backup reminder.</b> ${esc(ctx.backupReminderLabel)} I save mo sa Google Drive para sigurado.</span>
       <span class="notice-actions">
-        <button type="button" data-action="backup-download" class="btn-primary" style="padding:8px 14px">Download backup</button>
+        <button type="button" data-action="backup-drive" class="btn-primary" style="padding:8px 14px">Backup sa Drive</button>
         <button type="button" data-action="backup-remind-later" class="btn-link">Later</button>
       </span>
     </div>` : ''}
@@ -2697,7 +2698,7 @@
       { done: real.some(x => (Number(x.paid) || 0) > 0), label: 'Mag log ng bayad ng client', action: 'dock', key: 'payments' },
     ];
     if (feat('docs')) items.push({ done: (state.documents || []).length > 0, label: 'Gumawa ng quotation o SOA', action: 'dock', key: 'docs' });
-    items.push({ done: !!localStorage.getItem('shoottracker_last_backup'), label: 'Mag download ng backup', action: 'backup-download' });
+    items.push({ done: !!localStorage.getItem('shoottracker_last_backup'), label: 'Mag backup sa Google Drive', action: 'backup-drive' });
     const doneCount = items.filter(i => i.done).length;
     if (doneCount === items.length && !hasSampleData()) return '';
     return `
@@ -2853,9 +2854,10 @@
 
       <section class="card set-wide">
         <div class="card-title">Data mo</div>
-        <div class="set-sub">Nasa device na ito lang naka save ang lahat ng data mo, wala sa server. Mag backup ka linggo linggo at itago ang file sa Google Drive o sa email mo, para may kopya ka kung masira o mapalitan ang phone o laptop mo.</div>
+        <div class="set-sub">Nasa device na ito lang naka save ang data mo, wala sa server. Mag backup ka sa Google Drive linggo linggo para may kopya ka kung mawala, masira, o mapalitan ang phone o laptop mo. Pag nagpalit ka ng device, i download mo lang yung file sa Drive at pindutin ang Restore.</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <button type="button" class="btn-primary" data-action="backup-download">${icon('download', 16)} Download backup</button>
+          <button type="button" class="btn-primary" data-action="backup-drive">${icon('cloud', 16)} I backup sa Google Drive</button>
+          <button type="button" class="btn-ghost" data-action="backup-download">${icon('download', 16)} Download lang</button>
           <button type="button" class="btn-ghost" data-action="backup-restore">${icon('upload', 16)} Restore mula sa backup</button>
           <span style="font-size:12.5px;color:var(--text-dim)">${lastBackup ? 'Huling backup: ' + esc(fmtDate(lastBackup.slice(0, 10))) : 'Wala ka pang backup.'}</span>
         </div>
@@ -3421,6 +3423,20 @@
     return { rows, total, rangeLabel, startStr, endStr };
   }
 
+  function buildBackupFile() {
+    const data = {};
+    PERSIST_KEYS.forEach(k => { data[k] = state[k]; });
+    const payload = { app: 'eksakto', version: 1, exportedAt: new Date().toISOString(), data };
+    const name = `eksakto_backup_${fileSlug()}_${TODAY_STR}.json`;
+    try { return new File([JSON.stringify(payload, null, 2)], name, { type: 'application/json' }); }
+    catch (e) { const b = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); b.name = name; return b; }
+  }
+  function showToast(msg) {
+    let el = document.getElementById('eks-toast');
+    if (!el) { el = document.createElement('div'); el.id = 'eks-toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    el.textContent = msg; el.className = 'eks-toast show';
+    clearTimeout(showToast._t); showToast._t = setTimeout(() => { el.className = 'eks-toast'; }, 4200);
+  }
   function triggerDownload(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -4502,19 +4518,31 @@
       case 'settings-doc-reset': { const d0 = defaultSettings(); setSettings({ tplContract: d0.tplContract, tplQuotation: d0.tplQuotation, tplInvoice: d0.tplInvoice }); break; }
       case 'settings-feature': setState(s => ({ settings: { ...s.settings, features: { ...(s.settings.features || {}), [el.dataset.feat]: !((s.settings.features || {})[el.dataset.feat]) } } })); break;
       case 'backup-download': {
-        // One JSON file holding every data collection — a true backup you can restore from.
-        const data = {};
-        PERSIST_KEYS.forEach(k => { data[k] = state[k]; });
-        const payload = { app: 'eksakto', version: 1, exportedAt: new Date().toISOString(), data };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `eksakto_backup_${fileSlug()}_${TODAY_STR}.json`;
-        document.body.appendChild(a); a.click(); a.remove();
-        URL.revokeObjectURL(url);
-        markBackupDone();               // remember we just backed up
-        backupReminderDismissed = true; // hide the reminder banner
+        // One JSON file holding every data collection, a true backup you can restore from.
+        const file = buildBackupFile();
+        triggerDownload(file, file.name);
+        markBackupDone();
+        backupReminderDismissed = true;
         render();
+        showToast('Na download na ang backup mo. Itago mo sa Google Drive o sa email mo.');
+        break;
+      }
+      case 'backup-drive': {
+        const file = buildBackupFile();
+        const done = (msg) => { markBackupDone(); backupReminderDismissed = true; render(); showToast(msg); };
+        let canShareFile = false;
+        try { canShareFile = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) { canShareFile = false; }
+        if (canShareFile && navigator.share) {
+          // Phones: the share sheet lists Google Drive, so the file lands in their Drive in one tap.
+          navigator.share({ files: [file], title: 'Eksakto backup', text: 'Eksakto backup ' + TODAY_STR })
+            .then(() => done('Tapos na ang backup! Kung Drive ang pinili mo, nandoon na ang file.'))
+            .catch(err => { if (err && err.name === 'AbortError') return; triggerDownload(file, file.name); done('Na download na ang backup mo. I upload mo lang sa Google Drive mo.'); });
+        } else {
+          // Laptops: download the file, then open their Drive in a new tab so they can drop it in.
+          triggerDownload(file, file.name);
+          try { window.open('https://drive.google.com/drive/my-drive', '_blank', 'noopener'); } catch (e) { /* popup blocked */ }
+          done('Na download na ang backup. Nagbukas ang Google Drive mo sa bagong tab, i drag mo lang doon ang file.');
+        }
         break;
       }
       case 'backup-remind-later': { backupReminderDismissed = true; render(); break; }
@@ -4540,15 +4568,15 @@
           reader.onload = () => {
             let parsed;
             try { parsed = JSON.parse(reader.result); }
-            catch (err) { alert("That file isn't a valid backup, couldn't read it."); return; }
+            catch (err) { alert("Hindi mabasa ang file na ito. Siguraduhin mong Eksakto backup file ang pinili mo."); return; }
             const data = (parsed && parsed.data) ? parsed.data : parsed;
             const keysPresent = PERSIST_KEYS.filter(k => data && (k in data));
             if (!keysPresent.length) { alert("Hindi ito mukhang Eksakto backup file."); return; }
-            if (!confirm('Restore from this backup? This will REPLACE all your current data with the contents of the backup. This cannot be undone.')) return;
+            if (!confirm('I restore ang backup na ito? Papalitan nito ang lahat ng data mo ngayon sa device na ito, at hindi na ito maibabalik.')) return;
             const patch = {};
             keysPresent.forEach(k => { patch[k] = data[k]; });
             setState(patch);
-            alert('Backup restored successfully.');
+            showToast('Na restore na ang backup mo.');
           };
           reader.readAsText(file);
         });
