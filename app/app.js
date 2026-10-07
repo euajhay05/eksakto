@@ -28,7 +28,7 @@
     payments: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/>',
     money: '<path d="M4 19V5M4 19h16M8 15l3.5-4 3 2.5L20 7"/>',
     docs: '<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
-    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2.1 1.2M17.7 15.3l2.1 1.2M4.2 16.5l2.1-1.2M17.7 8.7l2.1-1.2"/><circle cx="12" cy="12" r="7"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
@@ -52,8 +52,14 @@
   // Buyer-editable names for stages, lead statuses and categories (stored values stay the same).
   function applyLabelSettings() {
     const sl = S().statusLabels || {};
+    // Drop last render's custom stages, then put the buyer's own stages back in, right before the last (done) stage.
+    for (let i = STATUS_META.length - 1; i >= 0; i--) if (STATUS_META[i].custom) STATUS_META.splice(i, 1);
     STATUS_META.forEach(m => { if (!m.base) m.base = m.label; m.label = String(sl[m.value] || '').trim() || m.base; });
+    const extra = customStages().filter(c => String(c.name || '').trim());
+    const doneIdx = STATUS_META.findIndex(m => m.value === 'posted');
+    extra.forEach((c, i) => STATUS_META.splice(doneIdx + i, 0, { value: c.id, label: String(c.name).trim(), base: String(c.name).trim(), color: 'oklch(0.55 0.1 230)', progress: 70, custom: true }));
   }
+  function customStages() { return (S().customStages || []).filter(c => c && c.id); }
   function expenseCategories() {
     const list = (S().expenseCategories || []).map(x => String(x || '').trim()).filter(Boolean);
     return list.concat(['Other']);
@@ -62,6 +68,8 @@
     const map = { business: bizName(), owner: ownerName() || bizName(), client: d.clientName || '[Client Name]', project: d.description || '[Project/Service]', date: d.date ? fmtDate(d.date) : '[Date]', amount: (mf || fmtMoney)(d.amount), valid: d.dueDate ? fmtDateShortYear(d.dueDate) : '' };
     return String(tpl || '').replace(/\{(\w+)\}/g, (m, k) => (k in map ? map[k] : m));
   }
+  function isOthersType(t) { return /^(others?|iba pa)$/i.test(String(t || '').trim()); }
+  function projectTypeLabel(sh) { const t = (sh && sh.projectType) || ''; const o = String((sh && sh.projectTypeOther) || '').trim(); return isOthersType(t) && o ? o : t; }
   function projectTypes() { return (S().projectTypes || []).map(x => String(x || '').trim()).filter(Boolean); }
   const STARTER_PRESETS = {
     video: {
@@ -268,6 +276,7 @@
     v = String(v == null ? '' : v).replace(/[^\d.]/g, '');
     const dotIdx = v.indexOf('.');
     if (dotIdx !== -1) v = v.slice(0, dotIdx + 1) + v.slice(dotIdx + 1).replace(/\./g, '');
+    v = v.replace(/^0+(?=\d)/, '');
     return v;
   }
   // Live "as-you-type" thousands-separator formatting for money inputs, e.g. "9584.02" -> "9,584.02".
@@ -465,10 +474,10 @@
             <button type="button" data-action="dp-next" style="all:unset;cursor:pointer;width:24px;height:24px;border-radius:7px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px">›</button>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">
           ${WEEKDAY_LABELS.map(w => `<div style="text-align:center;font-size:10.5px;font-weight:700;color:oklch(0.55 0.015 150)">${w}</div>`).join('')}
         </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
           ${cells.map(c => c.blank ? `<div></div>` : (c.disabled
             ? `<div style="aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:${c.textColor};opacity:0.4">${c.dayNum}</div>`
             : `<div data-action="dp-pick" data-bind="${bind}" data-date="${c.dateStr}" style="aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12.5px;font-weight:600;background:${c.bg};border:1px solid ${c.border};color:${c.textColor}">${c.dayNum}</div>`)).join('')}
@@ -987,7 +996,7 @@
 
     const shootsSearchLower = state.shootsSearch.toLowerCase();
     const searchedShoots = shootsSearchLower
-      ? shoots.filter(s => s.client.toLowerCase().includes(shootsSearchLower) || s.location.toLowerCase().includes(shootsSearchLower))
+      ? shoots.filter(s => [s.client, s.location, s.projectType, s.projectTypeOther].filter(Boolean).join(' ').toLowerCase().includes(shootsSearchLower))
       : shoots;
     const columns = STATUS_META.map(sm => ({
       status: sm.value, label: sm.label, color: sm.color,
@@ -1246,8 +1255,9 @@
     const expensesReportYearTotal = expensesReportMonths.reduce((s, m) => s + m.total, 0);
 
     const monthLabel = new Date(state.calendarYear, state.calendarMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    const calendarCells = buildCalendarCells(state.calendarYear, state.calendarMonth, shoots, state.selectedDate);
-    const selectedDateShoots = shoots.filter(s => s.date === state.selectedDate);
+    const calSource = state.shootsSearch ? searchedShoots : shoots;
+    const calendarCells = buildCalendarCells(state.calendarYear, state.calendarMonth, calSource, state.selectedDate);
+    const selectedDateShoots = calSource.filter(s => s.date === state.selectedDate);
 
     const fullTimeIncome = state.fullTimeIncome;
     const totalFullTime = !feat('salary') ? 0 : fullTimeIncome.reduce((s, f) => s + (Number(f.amount) || 0), 0);
@@ -1295,7 +1305,7 @@
         shootCountLabel: linked.length > 0 ? `${linked.length} shoot(s) · ${fmtMoney(linked.reduce((s, x) => s + (Number(x.package) || 0), 0))}` : 'No shoots yet',
         linkedShoots: linked,
       };
-    }).filter(c => c.name.toLowerCase().includes(state.clientsSearch.toLowerCase()));
+    }).filter(c => (c.name || '').toLowerCase().includes((state.clientsSearch || '').toLowerCase()));
     const activeClients = state.clients.filter(c => c.leadStatus === 'Booked' || c.leadStatus === 'Client').length;
 
     const monthPaidFromShoots = shoots.reduce((s, x) => s + shootCollectedInMonth(x, THIS_MONTH_KEY), 0);
@@ -1523,8 +1533,8 @@
   }
   function globalSearchResults() {
     const q = (state.globalSearch || '').trim().toLowerCase();
-    if (q.length < 2) return [];
-    const shoots = state.shoots.filter(sh => ((sh.client || '') + ' ' + (sh.location || '')).toLowerCase().includes(q)).slice(0, 5)
+    if (!q) return [];
+    const shoots = state.shoots.filter(sh => [sh.client, sh.location, sh.projectType, sh.projectTypeOther].filter(Boolean).join(' ').toLowerCase().includes(q)).slice(0, 5)
       .map(sh => ({ kind: 'Shoot', title: sh.client || 'Shoot', sub: [sh.location, sh.date ? fmtDate(sh.date) : ''].filter(Boolean).join(' · '), action: 'shoot-edit', id: sh.id }));
     const clients = state.clients.filter(c => (c.name || '').toLowerCase().includes(q)).slice(0, 4)
       .map(c => ({ kind: 'Client', title: c.name, sub: leadStatusLabel(c.leadStatus), action: 'client-edit', id: c.id }));
@@ -1539,9 +1549,9 @@
       <div class="tb-search${state.mSearchOpen ? ' m-open' : ''}">
         ${icon('search', 16)}
         <input type="search" id="global-search" data-search="1" value="${esc(state.globalSearch || '')}" placeholder="Hanapin ang client o shoot" autocomplete="off" aria-label="Search clients and shoots"/>
-        ${results.length ? `<div class="tb-results">${results.map(r => `<button type="button" data-action="${r.action}" data-id="${esc(r.id)}" data-search-pick="1"><span class="tr-kind">${r.kind}</span><span><b>${esc(r.title)}</b><small>${esc(r.sub || '')}</small></span></button>`).join('')}</div>` : ''}
+        ${results.length ? `<div class="tb-results">${results.map(r => `<button type="button" data-action="${r.action}" data-id="${esc(r.id)}" data-search-pick="1"><span class="tr-kind">${r.kind}</span><span><b>${esc(r.title)}</b><small>${esc(r.sub || '')}</small></span></button>`).join('')}</div>` : ((state.globalSearch || '').trim() ? `<div class="tb-results"><div style="padding:12px 14px;font-size:13px;opacity:.65">Walang nahanap na client o shoot.</div></div>` : '')}
       </div>
-      <button type="button" class="tb-icon${state.view === 'settings' ? ' on' : ''} desk-only" data-action="nav" data-view="settings" title="Settings" aria-label="Settings">${icon('settings', 20)}</button>
+      <button type="button" class="tb-icon${state.view === 'settings' ? ' on' : ''} desk-only" data-action="settings-toggle" title="Settings" aria-label="Settings">${icon('settings', 18)}<span>Settings</span></button>
       <div class="m-actions">
         <button type="button" class="m-round" data-action="m-search-toggle" aria-label="Search">${icon(state.mSearchOpen ? 'close' : 'search', 18)}</button>
         <button type="button" class="m-avatar" data-action="more-open" aria-label="Menu">${bizMark(38)}</button>
@@ -1688,7 +1698,7 @@
     <div class="shoot-card" draggable="true" data-action="shoot-edit" data-id="${esc(s.id)}">
       <div class="sc-top"><b>${esc(s.client)}</b>${statusPill(s.status)}</div>
       <div class="sc-meta">${[s.dateLabel, s.timeLabel, s.location].filter(x => x && x !== '').map(esc).join(' · ')}</div>
-      <div class="sc-type">${s.projectType ? esc(s.projectType) + ' · ' : ''}${esc(shootTypeLabel(s.shootType))}${(() => { const t = packageTiers().find(x => x.value === s.packageTier && x.value !== 'custom'); return t ? ' · ' + esc(t.label.split(' (')[0]) : ''; })()}</div>
+      <div class="sc-type">${projectTypeLabel(s) ? esc(projectTypeLabel(s)) + ' · ' : ''}${esc(shootTypeLabel(s.shootType))}${(() => { const t = packageTiers().find(x => x.value === s.packageTier && x.value !== 'custom'); return t ? ' · ' + esc(t.label.split(' (')[0]) : ''; })()}</div>
       ${total > 0 ? `<div class="sc-money"><span class="bar"><i style="width:${pct}%"></i></span><span class="sc-bal ${bal > 0 ? '' : 'paid'}">${bal > 0 ? fmtMoney(bal) + ' balance' : 'Bayad na'}</span></div>` : ''}
       <div class="sc-foot"><span style="color:${s.daysLeftColor}">${esc(s.daysLeftLabel || '')}</span><button type="button" class="sc-move" data-action="shoot-status-open" data-id="${esc(s.id)}">Move</button></div>
     </div>`;
@@ -1701,7 +1711,7 @@
     const isGeneral = normalizeShootType(s.shootType) !== 'Real Estate';
     const GP_LABELS = { idea: 'To Edit', shot: 'Editing', approval: 'For Approval', posted: 'Completed' };
     const opts = isGeneral
-      ? STATUS_META.filter(sm => ['idea', 'shot', 'approval', 'posted'].includes(sm.value)).map(sm => ({ value: sm.value, label: GP_LABELS[sm.value] || sm.label, color: sm.color }))
+      ? STATUS_META.filter(sm => sm.custom || ['idea', 'shot', 'approval', 'posted'].includes(sm.value)).map(sm => ({ value: sm.value, label: GP_LABELS[sm.value] || sm.label, color: sm.color }))
       : STATUS_META.map(sm => ({ value: sm.value, label: sm.label, color: sm.color }));
     const cur = normalizeShootStatus(s.status);
     return `
@@ -1860,10 +1870,10 @@
               <button type="button" data-action="ftdraft-date-cal-next" style="all:unset;cursor:pointer;width:24px;height:24px;border-radius:7px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px">›</button>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+          <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">
             ${WEEKDAY_LABELS.map(w => `<div style="text-align:center;font-size:10.5px;font-weight:700;color:oklch(0.55 0.015 150)">${w}</div>`).join('')}
           </div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+          <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
             ${ftDraftDateCells.map(c => c.blank ? `<div></div>` : `
               <div ${c.disabled ? '' : `data-action="ftdraft-date-pick" data-date="${c.dateStr}"`} style="aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:${c.disabled ? 'not-allowed' : 'pointer'};font-size:12.5px;font-weight:600;background:${c.bg};border:1px solid ${c.border};color:${c.textColor}">${c.dayNum}</div>`).join('')}
           </div>
@@ -2236,10 +2246,10 @@
               <button type="button" data-action="doc-date-cal-next" style="all:unset;cursor:pointer;width:24px;height:24px;border-radius:7px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px">›</button>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+          <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">
             ${WEEKDAY_LABELS.map(w => `<div style="text-align:center;font-size:10.5px;font-weight:700;color:oklch(0.55 0.015 150)">${w}</div>`).join('')}
           </div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+          <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
             ${docDateCells.map(c => c.blank ? `<div></div>` : `
               <div data-action="doc-date-pick" data-date="${c.dateStr}" style="aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12.5px;font-weight:600;background:${c.bg};border:1px solid ${c.border};color:${c.textColor}">${c.dayNum}</div>`).join('')}
           </div>
@@ -2264,10 +2274,10 @@
               <button type="button" data-action="doc-due-cal-next" style="all:unset;cursor:pointer;width:24px;height:24px;border-radius:7px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px">›</button>
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+          <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">
             ${WEEKDAY_LABELS.map(w => `<div style="text-align:center;font-size:10.5px;font-weight:700;color:oklch(0.55 0.015 150)">${w}</div>`).join('')}
           </div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+          <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
             ${docDueCells.map(c => c.blank ? `<div></div>` : `
               <div data-action="doc-due-pick" data-date="${c.dateStr}" style="aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12.5px;font-weight:600;background:${c.bg};border:1px solid ${c.border};color:${c.textColor}">${c.dayNum}</div>`).join('')}
           </div>
@@ -2844,8 +2854,13 @@
         <div class="card-title">Mga stage ng shoot</div>
         <div class="set-sub">Ang tawag mo sa bawat column sa Shoots board.</div>
         <div class="set-pairs">
-          ${STATUS_META.map(m => `<div class="field"><label>${esc(m.base || m.label)}</label>${text(`settings.statusLabels.${m.value}`, (st.statusLabels || {})[m.value], m.base || m.label)}</div>`).join('')}
+          ${STATUS_META.filter(m => !m.custom).map(m => `<div class="field"><label>${esc(m.base || m.label)}</label>${text(`settings.statusLabels.${m.value}`, (st.statusLabels || {})[m.value], m.base || m.label)}</div>`).join('')}
         </div>
+        <div class="set-sub" style="margin-top:16px">Sarili mong stage. Lalabas ito sa Shoots board bago ang huling stage.</div>
+        <div class="set-rows">
+          ${(st.customStages || []).map((c, i) => `<div class="set-row"><div class="field" style="flex:1;margin:0">${text(`settings.customStages.${i}.name`, c.name, 'e.g. Same Day Edit, Color Grading, Album Layout')}</div>${delBtn('settings-stage-del" data-stage="' + esc(c.id), i)}</div>`).join('')}
+        </div>
+        <button type="button" class="btn-ghost" data-action="settings-stage-add">${icon('plus', 16)} Dagdag na stage</button>
       </section>
 
       <section class="card">
@@ -3068,7 +3083,7 @@
     const GP_STATUS_LABELS = isEditOnly
       ? { idea: 'To Edit', shot: 'Editing', approval: 'For Approval', posted: 'Completed' }
       : { tentative: 'Tentative', idea: 'To Shoot', shot: 'Editing', approval: 'For Approval', posted: 'Completed' };
-    const GP_STATUS_VALUES = isEditOnly ? ['idea','shot','approval','posted'] : ['tentative','idea','shot','approval','posted'];
+    const GP_STATUS_VALUES = (isEditOnly ? ['idea','shot','approval','posted'] : ['tentative','idea','shot','approval','posted']).concat(STATUS_META.filter(sm => sm.custom).map(sm => sm.value));
     const statusOptions = isGeneral
       ? STATUS_META.filter(sm => GP_STATUS_VALUES.includes(sm.value)).map(sm => ({ ...sm, label: GP_STATUS_LABELS[sm.value] || sm.label }))
       : (isEdit ? STATUS_META : STATUS_META.filter(sm => sm.value === 'tentative' || sm.value === 'idea'));
@@ -3107,7 +3122,7 @@
         <div class="modal-fields">
           <div class="field"><label>Client / Project</label><input type="text" value="${esc(d.client)}" data-bind="draft.client" data-fmt="autocomplete" placeholder="e.g. Globe Telecom Anthem" required autocomplete="off"/>
           </div>
-          ${projectTypes().length ? `<div class="field"><label>Klase ng project</label><select data-bind="draft.projectType"><option value="">Pumili</option>${projectTypes().concat(d.projectType && !projectTypes().includes(d.projectType) ? [d.projectType] : []).map(t => `<option value="${esc(t)}" ${d.projectType === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>` : ''}
+          ${projectTypes().length ? `<div class="field"><label>Klase ng project</label><select data-bind="draft.projectType"><option value="">Pumili</option>${projectTypes().concat(d.projectType && !projectTypes().includes(d.projectType) ? [d.projectType] : []).map(t => `<option value="${esc(t)}" ${d.projectType === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>${isOthersType(d.projectType) ? `<div class="field"><label>Please specify <span style="font-weight:500;opacity:.6">(optional)</span></label><input type="text" value="${esc(d.projectTypeOther || '')}" data-bind="draft.projectTypeOther" placeholder="e.g. Christening, Graduation, Baby shower" maxlength="60"/></div>` : ''}` : ''}
           ${isEditOnly ? `
           <div class="field"><label>Projects / Deliverables</label>
             ${projectItems.length ? projectItems.map((p, i) => `
@@ -3138,10 +3153,10 @@
                     <button type="button" data-action="shoot-date-cal-next" style="all:unset;cursor:pointer;width:24px;height:24px;border-radius:7px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px">›</button>
                   </div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+                <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">
                   ${WEEKDAY_LABELS.map(w => `<div style="text-align:center;font-size:10.5px;font-weight:700;color:oklch(0.55 0.015 150)">${w}</div>`).join('')}
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+                <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
                   ${pickerCells.map(c => c.blank ? `<div></div>` : `
                     <div data-action="date-picker-pick" data-date="${c.dateStr}" style="aspect-ratio:1;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-size:12.5px;font-weight:600;background:${c.bg};border:1px solid ${c.border};color:${c.textColor}">
                       <span>${c.dayNum}</span>
@@ -3187,10 +3202,10 @@
                   <button type="button" data-action="shoot-deadline-cal-next" style="all:unset;cursor:pointer;width:24px;height:24px;border-radius:7px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px">›</button>
                 </div>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+              <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:4px">
                 ${WEEKDAY_LABELS.map(w => `<div style="text-align:center;font-size:10.5px;font-weight:700;color:oklch(0.55 0.015 150)">${w}</div>`).join('')}
               </div>
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+              <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
                 ${deadlinePickerCells.map(c => c.blank ? `<div></div>` : `
                   <div data-action="deadline-picker-pick" data-date="${c.dateStr}" style="aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12.5px;font-weight:600;background:${c.bg};border:1px solid ${c.border};color:${c.textColor}">${c.dayNum}</div>`).join('')}
               </div>
@@ -4072,6 +4087,7 @@
   function render() {
     const active = document.activeElement;
     const activeBind = active && active.dataset ? active.dataset.bind : null;
+    const activeId = !activeBind && active && active.id && /^(INPUT|TEXTAREA)$/.test(active.tagName) ? active.id : null;
     const selStart = active && 'selectionStart' in active ? active.selectionStart : null;
     const selEnd = active && 'selectionEnd' in active ? active.selectionEnd : null;
     const scrollTop = document.querySelector('.main') ? document.querySelector('.main').scrollTop : 0;
@@ -4140,6 +4156,12 @@
           try { el.setSelectionRange(selStart, selEnd); } catch (e) { /* not a text-like input */ }
         }
       }
+    } else if (activeId) {
+      const el = document.getElementById(activeId);
+      if (el && el !== document.activeElement) {
+        el.focus();
+        if (selStart != null && el.setSelectionRange) { try { el.setSelectionRange(selStart, selEnd); } catch (e) { /* not text-like */ } }
+      }
     }
   }
 
@@ -4177,7 +4199,7 @@
       shootDateCalYear: calBase.getFullYear(), shootDateCalMonth: calBase.getMonth(),
       shootDeadlineCalYear: calBase.getFullYear(), shootDeadlineCalMonth: calBase.getMonth(),
       draftDateLocked: !!lockDate, shootLocOpen: false,
-      draft: { id: null, client: '', location: '', date: initialDate, deadline: '', time: '09:00', status: 'idea', scriptStatus: 'Not Started', shootType: 'Real Estate', serviceType: 'shoot', currency: 'PHP', notes: '', packageTier: 'basic', package: '', paid: '', paidDate: TODAY_STR, addons: {} },
+      draft: { id: null, client: '', location: '', date: initialDate, deadline: '', time: '09:00', status: 'idea', scriptStatus: 'Not Started', shootType: 'Real Estate', serviceType: 'shoot', currency: 'PHP', notes: '', packageTier: (packageTiers()[0] || {}).value || 'custom', package: '', paid: '', paidDate: TODAY_STR, addons: {} },
     });
   }
   function openEditShoot(id) {
@@ -4228,7 +4250,14 @@
 
   function handleAction(action, el, ev) {
     const id = el.dataset.id;
+    if (el.dataset.searchPick) state = { ...state, globalSearch: '', mSearchOpen: false };
     switch (action) {
+      case 'settings-toggle': {
+        const back = state.view === 'settings' ? (state.prevView && state.prevView !== 'settings' ? state.prevView : 'dashboard') : 'settings';
+        setState(s => ({ prevView: s.view === 'settings' ? s.prevView : s.view, view: back, mobileNavOpen: false, globalSearch: '' }));
+        window.scrollTo(0, 0);
+        break;
+      }
       case 'nav':
         try { localStorage.setItem('shoottracker_last_view', el.dataset.view); } catch (e) { /* storage unavailable */ }
         setState({ view: el.dataset.view, mobileNavOpen: false });
@@ -4531,6 +4560,14 @@
       case 'setup-finish': finishSetup(el.dataset.sample === '1'); break;
       case 'checklist-hide': setSettings({ checklistHidden: true }); break;
       case 'sample-clear': setState(s => ({ shoots: s.shoots.filter(x => !x.sample), clients: s.clients.filter(x => !x.sample), expenses: s.expenses.filter(x => !x.sample) })); break;
+      case 'settings-stage-add': setState(s => ({ settings: { ...s.settings, customStages: [...(s.settings.customStages || []), { id: 'c_' + Date.now().toString(36), name: '' }] } })); break;
+      case 'settings-stage-del': {
+        const sid = el.dataset.stage;
+        const n = state.shoots.filter(x => x.status === sid).length;
+        if (n) { alert('May ' + n + ' shoot pa sa stage na ito. Ilipat mo muna sila sa ibang stage bago mo burahin.'); break; }
+        setState(s => ({ settings: { ...s.settings, customStages: (s.settings.customStages || []).filter(c => c.id !== sid) } }));
+        break;
+      }
       case 'settings-list-add': { const k = el.dataset.list; setState(s => ({ settings: { ...s.settings, [k]: [...(s.settings[k] || []), ''] } })); break; }
       case 'settings-list-del': { const k = el.dataset.list; setState(s => ({ settings: { ...s.settings, [k]: (s.settings[k] || []).filter((_, i) => i !== Number(el.dataset.idx)) } })); break; }
       case 'settings-preset': setState({ presetConfirm: el.dataset.preset }); break;
@@ -4813,7 +4850,7 @@
         if (el.dataset.which === 'shoot') { setState({ shootConfirmCloseOpen: true }); break; }
         // For data-entry modals, ignore clicks on the backdrop (outside the box) so an
         // accidental click doesn't discard whatever is being typed. Close with the ✕ button.
-        if (['gear', 'loan', 'loanpayment', 'shootpayment', 'goal', 'goalfund', 'client'].includes(el.dataset.which)) break;
+        if (['gear', 'loan', 'loanpayment', 'shootpayment', 'goal', 'goalfund', 'client', 'telegram'].includes(el.dataset.which)) break;
         closeModalOf(el.dataset.which);
         break;
       case 'finance-breakdown': setState({ financeBreakdown: el.dataset.key }); break;
@@ -5537,6 +5574,15 @@
         state = { ...state, draft: { ...state.draft, projectItems: arr } };
         return;
       }
+      if (el.dataset.search) {
+        // Top bar search: keep the typed text in state, re-render the results, keep the caret.
+        const pos = el.selectionStart == null ? el.value.length : el.selectionStart;
+        state = { ...state, globalSearch: el.value };
+        render();
+        const gs = document.getElementById('global-search');
+        if (gs) { gs.focus(); try { gs.setSelectionRange(pos, pos); } catch (err) { /* not applicable */ } }
+        return;
+      }
       const bind = el.dataset.bind;
       if (!bind) return;
       if (el.dataset.fmt === 'money') {
@@ -5612,6 +5658,10 @@
       // raw, comma-formatted display text, turning "11,000" into NaN/0 right before submit.
       if (el.dataset.fmt) return;
       const bind = el.dataset.bind;
+      if (bind && el.type === 'number') {
+        // Defer so a click on the next field lands first; re-rendering mid click would swallow it.
+        applyBind(bind, el.value); setTimeout(() => { const a = document.activeElement; if (a && a.type === 'number') return; render(); }, 0); return;
+      }
       if (bind) { applyBind(bind, el.value); render(); }
     });
 
@@ -5629,6 +5679,9 @@
       } else if (state.loanModal || state.loanPaymentModal || state.shootPaymentModal || state.goalModal || state.goalFundModal || state.clientModal || state.telegramModalOpen || state.chipModal) {
         e.preventDefault(); e.stopPropagation();
         closeModalOf(state.loanModal ? 'loan' : state.loanPaymentModal ? 'loanpayment' : state.shootPaymentModal ? 'shootpayment' : state.goalModal ? 'goal' : state.goalFundModal ? 'goalfund' : state.clientModal ? 'client' : state.telegramModalOpen ? 'telegram' : 'chip');
+      } else if (state.gearModal || state.shootStatusModal || state.rescheduleDraft || state.financeExportOpen || state.expenseExportOpen || state.financeBreakdown || state.expCatOpen || state.expReassignId || state.presetConfirm || state.quickAddOpen || state.moreOpen || state.mSearchOpen || state.globalSearch) {
+        e.preventDefault(); e.stopPropagation();
+        setState({ gearModal: null, shootStatusModal: null, rescheduleDraft: null, financeExportOpen: false, expenseExportOpen: false, financeBreakdown: null, expCatOpen: false, expReassignId: null, presetConfirm: null, quickAddOpen: false, moreOpen: false, mSearchOpen: false, globalSearch: '' });
       }
     });
 
@@ -5673,7 +5726,7 @@
         const isEditOnlyGP = !isRealEstate && d.serviceType === 'edit';
         const isAddMode = !!(state.modal && state.modal.mode === 'add');
         // Foreign General Project: totals stay in PHP (= the PHP actually received); the $ charged is stored as a note only.
-        const cleaned = { ...d, package: isForeignGP ? paidAmount : (packageAmount + addonsTotal), paid: paidAmount, usdCharged: Number(d.usdCharged) || 0, ...(reconciledPayments ? { payments: reconciledPayments } : {}), ...(isEditOnlyGP && isAddMode ? { date: TODAY_STR } : {}) };
+        const cleaned = { ...d, package: isForeignGP ? paidAmount : (packageAmount + addonsTotal), paid: paidAmount, usdCharged: Number(d.usdCharged) || 0, projectTypeOther: isOthersType(d.projectType) ? String(d.projectTypeOther || '').trim() : '', ...(reconciledPayments ? { payments: reconciledPayments } : {}), ...(isEditOnlyGP && isAddMode ? { date: TODAY_STR } : {}) };
         setState(s => {
           const name = (cleaned.client || '').trim();
           const hasClient = name && s.clients.some(c => c.name.trim().toLowerCase() === name.toLowerCase());
@@ -5818,7 +5871,12 @@
   function startClockInterval() {
     if (clockIntervalStarted) return;
     clockIntervalStarted = true;
-    setInterval(() => render(), 30000);
+    setInterval(() => {
+      // Never re-render under someone who is typing; it would wipe unsaved fields or steal focus.
+      const a = document.activeElement;
+      if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+      render();
+    }, 30000);
   }
 
   function init() {
