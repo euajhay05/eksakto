@@ -89,6 +89,7 @@ td{padding:6px 4px;border-top:1px solid var(--line)}
           <button data-f="pending" aria-pressed="true">Naghihintay</button>
           <button data-f="approved" aria-pressed="false">Approved</button>
           <button data-f="rejected" aria-pressed="false">Rejected</button>
+          <button data-f="refunded" aria-pressed="false">Refunded</button>
           <button data-f="all" aria-pressed="false">Lahat</button>
         </div>
         <button class="btn ghost" id="refresh">I refresh</button>
@@ -131,7 +132,7 @@ td{padding:6px 4px;border-top:1px solid var(--line)}
   function render(){
     var list = all.filter(function(o){ return filter === 'all' || o.status === filter; });
     var approved = all.filter(function(o){ return o.status === 'approved'; });
-    $('k-pending').textContent = all.filter(function(o){ return o.status === 'pending'; }).length;
+    $('k-pending').textContent = all.filter(function(o){ return o.status === 'pending' && o.method !== 'paymongo'; }).length;
     $('k-approved').textContent = approved.length;
     $('k-total').textContent = peso(approved.reduce(function(a, o){ return a + o.amount; }, 0));
     if (shop) {
@@ -143,14 +144,20 @@ td{padding:6px 4px;border-top:1px solid var(--line)}
     $('orders').innerHTML = list.length ? list.map(function(o){
       var d = new Date(o.created_at);
       var when = d.toLocaleString('en-PH', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
-      var pill = o.status === 'pending' ? '<span class="pill gold">Naghihintay</span>' : o.status === 'approved' ? '<span class="pill">Approved</span>' : '<span class="pill bad">Rejected</span>';
+      var auto = o.method === 'paymongo';
+      var pill = o.status === 'pending' ? (auto ? '<span class="pill" style="opacity:.6">Hindi tinuloy ang bayad</span>' : '<span class="pill gold">Naghihintay</span>')
+        : o.status === 'approved' ? '<span class="pill">' + (auto ? 'Bayad, auto' : 'Approved') + '</span>'
+        : o.status === 'refunded' ? '<span class="pill bad">Refunded</span>'
+        : '<span class="pill bad">Rejected</span>';
       var actions = o.status === 'pending'
-        ? '<button class="btn" data-ok="' + o.id + '">Approve</button><button class="btn bad" data-no="' + o.id + '">Reject</button>'
+        ? (auto ? '' : '<button class="btn" data-ok="' + o.id + '">Approve</button><button class="btn bad" data-no="' + o.id + '">Reject</button>')
         : o.status === 'approved'
-          ? '<span class="key">' + esc(o.license_key) + '</span><a class="btn ghost" target="_blank" rel="noopener" href="' + mailLink(o) + '">Email ulit</a><button class="btn bad" data-no="' + o.id + '">Bawiin</button>'
+          ? '<span class="key">' + esc(o.license_key) + '</span><a class="btn ghost" target="_blank" rel="noopener" href="' + mailLink(o) + '">Email ulit</a><button class="btn bad" data-refund="' + o.id + '">I refund</button>'
+          : o.status === 'refunded' ? '<span class="key" style="text-decoration:line-through">' + esc(o.license_key || '') + '</span>'
           : '<button class="btn ghost" data-ok="' + o.id + '">Approve pa rin</button>';
+      var refLine = auto ? 'PayMongo QR Ph' + (o.paymongo_payment_id ? ' · ' + esc(o.paymongo_payment_id) : '') : 'Ref ' + esc(o.gcash_ref);
       return '<div class="order"><div class="o-main"><b>' + esc(o.name) + '</b> ' + pill + (o.founding_code ? ' <span class="pill">Founding</span>' : '') +
-        '<div>' + esc(o.email) + ' · ' + when + '</div><div class="o-ref">Ref ' + esc(o.gcash_ref) + '</div></div>' +
+        '<div>' + esc(o.email) + ' · ' + when + '</div><div class="o-ref">' + refLine + '</div></div>' +
         '<div style="text-align:right"><div class="o-amt">' + peso(o.amount) + '</div><div class="o-actions" style="margin-top:8px;justify-content:flex-end">' + actions + '</div></div></div>';
     }).join('') : '<div class="empty">Wala pang order dito.</div>';
   }
@@ -163,6 +170,15 @@ td{padding:6px 4px;border-top:1px solid var(--line)}
   }
 
   $('orders').addEventListener('click', function(e){
+    var rf = e.target.closest('[data-refund]');
+    if (rf) {
+      var rid = rf.getAttribute('data-refund');
+      var ro = all.find(function(x){ return x.id === rid; });
+      if (!confirm('I refund ang order ni ' + (ro ? ro.name : '') + '? Made deactivate ang license key niya sa lahat ng device. Tandaan: ikaw pa rin ang magbabalik ng pera sa PayMongo dashboard (Payments > Refund) o sa GCash.')) return;
+      rf.disabled = true;
+      sb.rpc('admin_refund', { p_order: rid, p_note: null }).then(function(r){ if (r.error) { alert('Hindi gumana: ' + r.error.message); rf.disabled = false; return; } load(); });
+      return;
+    }
     var ok = e.target.closest('[data-ok]'), no = e.target.closest('[data-no]');
     if (!ok && !no) return;
     var id = (ok || no).getAttribute(ok ? 'data-ok' : 'data-no');

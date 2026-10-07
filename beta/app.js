@@ -2527,7 +2527,32 @@
   const LICENSE_REQUIRED = location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && !location.pathname.startsWith('/beta');
   function readLicense() { try { return JSON.parse(localStorage.getItem(LICENSE_LS) || 'null'); } catch (e) { return null; } }
   function hasLicense() { const l = readLicense(); return !!(l && l.key && l.ok); }
-  let licenseState = { busy: false, error: '' };
+  // A buyer coming from the checkout success page lands on /app/?key=EKS-XXXX-XXXX, so prefill it.
+  const urlKey = (() => { try { const k = new URLSearchParams(location.search).get('key'); if (k) history.replaceState(null, '', location.pathname + location.hash); return k ? k.toUpperCase() : ''; } catch (e) { return ''; } })();
+  let licenseState = { busy: false, error: '', key: urlKey };
+  // Re-check a saved key every few days while online. A refunded (revoked) key is removed from the device.
+  // No internet or a server hiccup never locks anyone out; only a clear "not valid" answer does.
+  const LICENSE_RECHECK_MS = 3 * 24 * 60 * 60 * 1000;
+  function recheckLicense() {
+    if (!LICENSE_REQUIRED) return;
+    const l = readLicense();
+    if (!l || !l.key || !l.ok) return;
+    const last = Date.parse(l.checkedAt || l.at || 0) || 0;
+    if (Date.now() - last < LICENSE_RECHECK_MS) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    fetch(LICENSE_API.url + '/rest/v1/rpc/check_license', { method: 'POST', headers: { apikey: LICENSE_API.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: l.key }) })
+      .then(r => r.ok ? r.json() : null)
+      .then(r => {
+        if (!r) return;
+        if (r.ok) { try { localStorage.setItem(LICENSE_LS, JSON.stringify({ ...l, checkedAt: new Date().toISOString() })); } catch (e) { /* storage blocked */ } return; }
+        if (r.reason === 'revoked' || r.reason === 'not_found') {
+          try { localStorage.removeItem(LICENSE_LS); } catch (e) { /* storage blocked */ }
+          licenseState = { key: '', busy: false, error: 'Na deactivate na ang license key sa device na ito, halimbawa dahil na refund na. Kung sa tingin mo ay mali ito, mag email sa eksakto.app@gmail.com. Safe pa rin ang data mo sa device na ito.' };
+          render();
+        }
+      })
+      .catch(() => { /* offline or server down: keep access */ });
+  }
   function modalLicense() {
     if (!LICENSE_REQUIRED || hasLicense()) return '';
     return `
@@ -2553,11 +2578,11 @@
       .then(r => r.json())
       .then(r => {
         if (r && r.ok) {
-          try { localStorage.setItem(LICENSE_LS, JSON.stringify({ key, ok: true, name: r.name || '', at: new Date().toISOString() })); } catch (e) { /* storage blocked */ }
+          try { localStorage.setItem(LICENSE_LS, JSON.stringify({ key, ok: true, name: r.name || '', at: new Date().toISOString(), checkedAt: new Date().toISOString() })); } catch (e) { /* storage blocked */ }
           licenseState = { busy: false, error: '' };
           if (r.name && !S().ownerName) setSettings({ ownerName: r.name }); else render();
         } else {
-          licenseState = { key, busy: false, error: 'Hindi valid ang key na yan. Pakicheck, o mag email sa hello@eksakto.app.' }; render();
+          licenseState = { key, busy: false, error: 'Hindi valid ang key na yan. Pakicheck, o mag email sa eksakto.app@gmail.com.' }; render();
         }
       })
       .catch(() => { licenseState = { key, busy: false, error: 'Kailangan ng internet para ma activate. Subukan ulit.' }; render(); });
@@ -5799,6 +5824,8 @@
   function init() {
     wireListeners();
     startClockInterval();
+    setTimeout(recheckLicense, 1500);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') recheckLicense(); });
     const saved = readLocalData();
     if (saved) {
       applyPersistedData(saved);

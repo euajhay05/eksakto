@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bilhin ang Eksakto</title>
-<meta name="description" content="Isang bayad, sayo na forever. Bayaran via GCash at matatanggap mo ang license key sa email.">
+<meta name="description" content="Isang bayad, sayo na forever. Magbayad via QR Ph (GCash, Maya o bank app) at matatanggap mo agad ang license key.">
 <meta name="theme-color" content="#F3F5F0">
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='eksakto icon'%3E%3Crect width='1024' height='1024' rx='232' fill='%2313221A'/%3E%3Cg transform='translate%28145.2 749.6%29 scale%280.9 -0.9%29'%3E%3Cpath fill='%23F3F5F0' d='M313 -14Q247 -14 195.0 3.5Q143 21 106.5 55.0Q70 89 51.0 139.0Q32 189 32 254Q32 317 50.5 370.0Q69 423 103.5 461.5Q138 500 188.5 521.0Q239 542 302 542Q366 542 414.5 521.5Q463 501 494.5 461.0Q526 421 541.0 363.5Q556 306 551 232L187 229Q192 168 222 138Q257 101 312 101Q339 101 357.0 108.5Q375 116 386.5 127.5Q398 139 404.5 153.0Q411 167 415 180L555 150Q547 113 529.5 83.0Q512 53 482.5 31.0Q453 9 411.5 -2.5Q370 -14 313 -14ZM191 313 404 315Q404 340 396 359Q383 390 358.0 404.5Q333 419 304 419Q269 419 242.5 400.0Q216 381 201 345Q195 331 191 313Z'/%3E%3Cpath fill='%23E8A33D' transform='translate%28553 0%29' d='M125 -13Q73 -13 47.5 9.0Q22 31 22 77Q22 124 47.5 146.0Q73 168 125 168Q178 168 204.0 146.0Q230 124 230 77Q230 -13 125 -13Z'/%3E%3C/g%3E%3C/svg%3E">
@@ -81,86 +81,142 @@ footer a{color:var(--muted)}
   <div id="closed" class="card center" hidden>
     <h1 class="big-t">Soon na.</h1>
     <p class="lead">Open na ang bilihan sa October 28. Join ka muna sa waitlist para mauna ka at makuha ang founding price.</p>
+    <div style="display:flex;gap:10px;justify-content:center;margin:22px 0 4px;flex-wrap:wrap">
+      <div style="background:var(--tint);border-radius:14px;padding:12px 18px"><div style="font-size:12px;color:var(--muted);font-weight:600">Founding price, first 100</div><div style="font-size:24px;font-weight:700">₱499</div></div>
+      <div style="border:1px solid var(--line);border-radius:14px;padding:12px 18px"><div style="font-size:12px;color:var(--muted);font-weight:600">Regular price</div><div style="font-size:24px;font-weight:700">₱699</div></div>
+    </div>
+    <p class="hint">One time payment, lifetime license. 7 day money back guarantee.</p>
     <a class="btn" href="/#survey" style="text-decoration:none">Join the waitlist</a>
   </div>
 
   <div id="shop" hidden>
     <div class="hero">
       <div><span class="price" id="price">₱699</span><span class="price-old" id="price-old" hidden>₱699</span></div>
-      <div class="price-note">One time payment lang. Sayo na forever.</div>
+      <div class="price-note">One time payment lang. Sayo na forever. May 7 day money back guarantee.</div>
     </div>
 
     <form id="form" class="card" novalidate>
       <div class="sec">
-        <div class="sec-t">Scan mo lang para magbayad</div>
-        <div class="qr-wrap">
-          <img src="gcash-qr.png" alt="GCash QR ng Eksakto" onerror="this.hidden=true">
-        </div>
-        <button type="button" class="code-toggle" id="code-toggle">May founding code ka?</button>
-        <div id="code-box" hidden>
-          <div class="code-row"><input id="code" placeholder="WAITXXXXX" autocomplete="off" aria-label="Founding code"><button type="button" class="btn-sm" id="code-btn">Apply</button></div>
-          <div class="msg" id="code-msg" role="status"></div>
-        </div>
-      </div>
-
-      <div class="sec">
-        <div class="sec-t">Saan namin isesend ang key mo?</div>
+        <div class="sec-t">Saan namin isesend ang license key mo?</div>
         <label for="name">Full name</label><input id="name" autocomplete="name" placeholder="Juan Reyes" required>
         <label for="email">Email</label><input id="email" type="email" autocomplete="email" placeholder="juan@gmail.com" required>
-        <label for="ref">GCash reference number</label><input id="ref" inputmode="numeric" autocomplete="off" placeholder="13 digits sa receipt" required>
-        <button class="btn" type="submit" id="submit">I submit ang bayad</button>
+        <div style="margin-top:16px">
+          <button type="button" class="code-toggle" id="code-toggle">May founding code ka?</button>
+          <div id="code-box" hidden>
+            <label for="code">Founding code</label>
+            <div class="code-row"><input id="code" placeholder="WAITXXXXX" autocomplete="off"><button type="button" class="btn-sm" id="code-btn">Apply</button></div>
+            <div class="msg" id="code-msg" role="status"></div>
+          </div>
+        </div>
+        <div id="manual" hidden>
+          <div class="sec-p" style="margin-top:18px">Scan mo ang QR para magbayad, tapos ilagay ang reference number.</div>
+          <div class="qr-wrap"><img src="gcash-qr.png" alt="GCash QR ng Eksakto" onerror="this.hidden=true"></div>
+          <label for="ref">GCash reference number</label><input id="ref" inputmode="numeric" autocomplete="off" placeholder="13 digits sa receipt">
+        </div>
+        <button class="btn" type="submit" id="submit">Magbayad via QR Ph</button>
+        <div class="hint center" id="pay-hint" style="margin-top:10px">Pwede ang GCash, Maya, at karamihan ng bank apps.</div>
         <div class="msg err" id="form-msg" role="alert"></div>
       </div>
     </form>
   </div>
 
+  <div id="wait" class="card center" hidden>
+    <h1 class="big-t">Chine check ang bayad mo...</h1>
+    <p class="lead">Ilang segundo lang ito. Huwag mo munang isara ang page.</p>
+  </div>
+
+  <div id="paid" class="card center" hidden>
+    <div class="done-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h1 class="big-t">Bayad na, salamat!</h1>
+    <p class="lead">Ito ang license key mo. Isinend din namin ito sa <b id="paid-email"></b>.</p>
+    <div id="paid-key" style="margin:18px 0 6px;font-size:26px;font-weight:700;letter-spacing:2px;background:var(--tint);padding:16px;border-radius:14px"></div>
+    <button type="button" class="code-toggle" id="copy-key">Copy key</button>
+    <a class="btn" id="open-app" href="/app/" style="text-decoration:none">Buksan ang Eksakto</a>
+    <p class="hint">I save mo ang key. Kailangan mo ulit ito kapag lumipat ka ng phone o laptop.</p>
+  </div>
+
+  <div id="pending" class="card center" hidden>
+    <h1 class="big-t">Na receive na namin ang order mo.</h1>
+    <p class="lead">Hindi pa namin nakikita ang bayad. Kapag na confirm na, isesend namin ang license key sa <b id="pending-email"></b>. Kung nakapagbayad ka na pero wala pa after 1 hour, mag email sa <a href="mailto:eksakto.app@gmail.com">eksakto.app@gmail.com</a>.</p>
+  </div>
+
   <div id="done" class="card center" hidden>
     <div class="done-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
     <h1 class="big-t">Got it, salamat!</h1>
-    <p class="lead">Iche check lang namin ang payment mo, tapos isesend namin ang license key sa <b id="done-email"></b>, usually within a few hours. Kung wala pa after 24 hours, check mo ang Spam folder o mag email sa <a href="mailto:hello@eksakto.app">hello@eksakto.app</a>.</p>
+    <p class="lead">Iche check lang namin ang payment mo, tapos isesend namin ang license key sa <b id="done-email"></b>, usually within a few hours. Kung wala pa after 24 hours, check mo ang Spam folder o mag email sa <a href="mailto:eksakto.app@gmail.com">eksakto.app@gmail.com</a>.</p>
   </div>
 
-  <footer>May tanong? <a href="mailto:hello@eksakto.app">hello@eksakto.app</a></footer>
+  <footer>May tanong? <a href="mailto:eksakto.app@gmail.com">eksakto.app@gmail.com</a><br><a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a> · <a href="/refund/">Refunds</a></footer>
 </div>
 
 <script>
 (function(){
   var SB = 'https://edngzvnyajxudvbzmalg.supabase.co';
   var KEY = 'sb_publishable_N3xc7VenyA933795z5Jsdw_Ud9pXhdf';
-  var BTN = 'I submit ang bayad';
+  var BTN_AUTO = 'Magbayad via QR Ph', BTN_MANUAL = 'I submit ang bayad';
   function rpc(fn, body){
     return fetch(SB + '/rest/v1/rpc/' + fn, { method:'POST', headers:{ apikey:KEY, 'Content-Type':'application/json' }, body: JSON.stringify(body || {}) })
       .then(function(r){ return r.json(); });
   }
   var $ = function(id){ return document.getElementById(id); };
   var peso = function(n){ return '₱' + Number(n).toLocaleString('en-PH'); };
-  var info = null, codeOk = false, appliedCode = '';
+  var show = function(id){ ['loading','closed','shop','wait','paid','pending','done'].forEach(function(x){ $(x).hidden = x !== id; }); window.scrollTo(0,0); };
+  var info = null, codeOk = false, appliedCode = '', manual = false;
+  var qs = new URLSearchParams(location.search);
+
+  // Sends a copy of each order to the "Eksakto Orders" Google Form so the owner gets an email.
+  function notify(name, email, amount, ref, code){
+    try {
+      var fd = new URLSearchParams({ 'entry.1034263404': name, 'entry.688522257': email, 'entry.1392357643': peso(amount), 'entry.1412800892': ref, 'entry.746774373': code || '' });
+      fetch('https://docs.google.com/forms/d/e/1FAIpQLSeQ0IZQ1RimWJbOfyC91O94Ml9FrPSOhKgR9zJHoPooKhqe9w/formResponse', { method:'POST', mode:'no-cors', body: fd }).catch(function(){});
+    } catch (e) { /* best effort */ }
+  }
+
+  // Coming back from PayMongo: poll until the webhook has issued the key.
+  if (qs.get('order') && qs.get('t')) {
+    show('wait');
+    var tries = 0, order = qs.get('order'), tok = qs.get('t');
+    (function poll(){
+      rpc('order_status', { p_order: order, p_token: tok }).then(function(r){
+        if (r && r.ok && r.status === 'approved' && r.license_key) {
+          $('paid-key').textContent = r.license_key; $('paid-email').textContent = r.email;
+          $('open-app').href = '/app/?key=' + encodeURIComponent(r.license_key);
+          var seen = 'eks_notified_' + order;
+          try { if (!localStorage.getItem(seen)) { notify('PayMongo order', r.email, r.amount, 'PayMongo ' + order.slice(0,8), ''); localStorage.setItem(seen, '1'); } } catch (e) {}
+          show('paid'); return;
+        }
+        if (++tries < 40) setTimeout(poll, 3000);
+        else { $('pending-email').textContent = (r && r.email) || 'email mo'; show('pending'); }
+      }).catch(function(){ if (++tries < 40) setTimeout(poll, 3000); else show('pending'); });
+    })();
+    $('copy-key').addEventListener('click', function(){
+      var k = $('paid-key').textContent;
+      (navigator.clipboard ? navigator.clipboard.writeText(k) : Promise.reject()).then(function(){ $('copy-key').textContent = 'Na copy na!'; }).catch(function(){ $('copy-key').textContent = 'I long press ang key para i copy'; });
+    });
+    return;
+  }
 
   function setPrice(amount){
     $('price').textContent = peso(amount);
     var f = amount < info.regular;
     $('price-old').hidden = !f; $('price-old').textContent = peso(info.regular);
   }
-  // Sends a copy of each order to the "Eksakto Orders" Google Form so the owner gets an email.
-  function notify(name, email, amount, ref, code){
-    try {
-      var fd = new URLSearchParams({ 'entry.1034263404': name, 'entry.688522257': email, 'entry.1392357643': peso(amount), 'entry.1412800892': ref, 'entry.746774373': code || '' });
-      fetch('https://docs.google.com/forms/d/e/1FAIpQLSeQ0IZQ1RimWJbOfyC91O94Ml9FrPSOhKgR9zJHoPooKhqe9w/formResponse', { method:'POST', mode:'no-cors', body: fd });
-    } catch (e) { /* notification is best effort */ }
-  }
   function openCode(){ $('code-box').hidden = false; $('code-toggle').hidden = true; }
   $('code-toggle').addEventListener('click', function(){ openCode(); $('code').focus(); });
-
-  var pre = new URLSearchParams(location.search).get('code');
+  var pre = qs.get('code');
   if (pre) { $('code').value = pre.toUpperCase(); openCode(); }
 
   rpc('shop_info').then(function(d){
-    info = d; $('loading').hidden = true;
-    if (!d.open) { $('closed').hidden = false; return; }
-    $('shop').hidden = false;
+    info = d;
+    if (!d.open) { show('closed'); return; }
+    show('shop');
+    if (qs.get('cancel')) { $('form-msg').textContent = 'Na cancel ang bayad. Pwede mong subukan ulit.'; }
+    if (qs.get('manual')) setManual();
     setPrice(d.regular);
     if (pre) checkCode();
   }).catch(function(){ $('loading').textContent = 'Hindi ma load. Check ang internet mo tapos i refresh.'; });
+
+  function setManual(){ manual = true; $('manual').hidden = false; $('pay-hint').hidden = true; $('submit').textContent = BTN_MANUAL; }
 
   function checkCode(){
     var c = $('code').value.trim().toUpperCase();
@@ -178,21 +234,37 @@ footer a{color:var(--muted)}
   $('code').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); checkCode(); } });
   $('code').addEventListener('input', function(){ if (codeOk) { codeOk = false; appliedCode = ''; setPrice(info.regular); $('code-msg').className = 'msg'; $('code-msg').textContent = 'I tap ulit ang Apply.'; } });
 
+  var WHY = { closed:'Sarado pa ang bilihan.', invalid:'May kulang o mali sa detalye. Pakicheck.', duplicate_ref:'Nagamit na ang reference number na yan. Kung sigurado kang tama, mag email sa eksakto.app@gmail.com.', too_many:'Masyadong maraming subok. Subukan ulit mamaya.', code_invalid:'Hindi na valid ang code. Burahin ito para regular price ang babayaran.' };
+
   $('form').addEventListener('submit', function(e){
     e.preventDefault();
-    var name = $('name').value.trim(), email = $('email').value.trim(), ref = $('ref').value.replace(/\s/g,'');
+    var name = $('name').value.trim(), email = $('email').value.trim();
     var m = $('form-msg'); m.textContent = '';
     if (!name) { m.textContent = 'Ilagay ang name mo.'; return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { m.textContent = 'Mukhang mali ang email. Pakicheck ulit.'; return; }
-    if (ref.length < 6) { m.textContent = 'Ilagay ang reference number galing sa GCash receipt mo.'; return; }
     if ($('code').value.trim() && !codeOk) { m.textContent = 'I tap muna ang Apply para ma check ang code, o i clear mo ito.'; return; }
-    var b = $('submit'); b.disabled = true; b.textContent = 'Submitting...';
-    rpc('submit_order', { p_name:name, p_email:email, p_ref:ref, p_code: appliedCode || null }).then(function(r){
-      if (r.ok) { notify(name, email, r.amount, ref, appliedCode); $('shop').hidden = true; $('done').hidden = false; $('done-email').textContent = email; window.scrollTo(0,0); return; }
-      var why = { closed:'Sarado pa ang bilihan.', invalid:'May kulang o mali sa detalye. Pakicheck.', duplicate_ref:'Nagamit na ang reference number na yan. Kung sigurado kang tama, mag email sa hello@eksakto.app.', too_many:'Masyadong maraming subok. Subukan ulit mamaya.', code_invalid:'Hindi na valid ang code. Burahin ito para ' + peso(info.regular) + ' ang babayaran.' };
-      m.textContent = why[r.reason] || 'May mali. Subukan ulit.';
-      b.disabled = false; b.textContent = BTN;
-    }).catch(function(){ m.textContent = 'Hindi ma send. Check ang internet mo at subukan ulit.'; b.disabled = false; b.textContent = BTN; });
+    var b = $('submit'); b.disabled = true;
+
+    if (manual) {
+      var ref = $('ref').value.replace(/\s/g,'');
+      if (ref.length < 6) { m.textContent = 'Ilagay ang reference number galing sa GCash receipt mo.'; b.disabled = false; return; }
+      b.textContent = 'Submitting...';
+      rpc('submit_order', { p_name:name, p_email:email, p_ref:ref, p_code: appliedCode || null }).then(function(r){
+        if (r.ok) { notify(name, email, r.amount, ref, appliedCode); $('done-email').textContent = email; show('done'); return; }
+        m.textContent = WHY[r.reason] || 'May mali. Subukan ulit.'; b.disabled = false; b.textContent = BTN_MANUAL;
+      }).catch(function(){ m.textContent = 'Hindi ma send. Check ang internet mo at subukan ulit.'; b.disabled = false; b.textContent = BTN_MANUAL; });
+      return;
+    }
+
+    b.textContent = 'Inihahanda ang QR...';
+    fetch(SB + '/functions/v1/create-checkout', { method:'POST', headers:{ 'Content-Type':'application/json', apikey: KEY }, body: JSON.stringify({ name:name, email:email, code: appliedCode || null }) })
+      .then(function(r){ return r.json(); })
+      .then(function(r){
+        if (r && r.ok && r.checkout_url) { location.href = r.checkout_url; return; }
+        if (r && (r.reason === 'not_configured' || r.reason === 'paymongo')) { setManual(); m.textContent = 'Hindi available ang QR Ph ngayon. Pwede kang magbayad direkta sa GCash sa ibaba.'; b.disabled = false; return; }
+        m.textContent = WHY[r && r.reason] || 'May mali. Subukan ulit.'; b.disabled = false; b.textContent = BTN_AUTO;
+      })
+      .catch(function(){ m.textContent = 'Hindi ma connect. Check ang internet mo at subukan ulit.'; b.disabled = false; b.textContent = BTN_AUTO; });
   });
 })();
 </script>
