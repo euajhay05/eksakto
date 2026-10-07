@@ -2563,6 +2563,44 @@
       })
       .catch(() => { /* offline or server down: keep access */ });
   }
+  function modalBackupGuide() {
+    if (!state.backupGuide) return '';
+    const step = (n, title, body, art) => `<div style="display:flex;gap:14px;align-items:flex-start">
+        <div style="flex:none;width:28px;height:28px;border-radius:50%;background:#1F6F47;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">${n}</div>
+        <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px;margin-bottom:2px">${title}</div><div style="font-size:13.5px;color:var(--mut);line-height:1.45">${body}</div>${art || ''}</div></div>`;
+    // A small, clean mock of the Drive screen (no logos) so people know exactly what to look for.
+    const gIco = (d) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="#444746" aria-hidden="true">${d}</svg>`;
+    const icFolder = gIco('<path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z"/>');
+    const icFile = gIco('<path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15.01l1.41 1.41L11 14.84V19h2v-4.16l1.59 1.59L16 15.01 12.01 11z"/>');
+    const icFolderUp = gIco('<path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10zM8 13.01l1.41 1.41L11 12.84V17h2v-4.16l1.59 1.59L16 13.01 12.01 9z"/>');
+    const gRow = (ic, label, key, on) => `<div style="display:flex;align-items:center;gap:16px;padding:8px 14px;color:#1F1F1F;${on ? 'background:#E1E3E1;' : ''}">${ic}<span style="flex:1">${label}</span><span style="font-size:11px;color:#444746">${key}</span>${on ? '<span style="width:8px;height:8px;border-radius:50%;background:#E8A33D;box-shadow:0 0 0 4px rgba(232,163,61,.3);flex:none"></span>' : ''}</div>`;
+    const artNew = `<div style="margin-top:10px;border:1px solid #DADCE0;border-radius:14px;background:#F8FAFD;padding:12px;font-family:Roboto,Arial,sans-serif;font-size:13.5px;position:relative;height:178px;overflow:hidden">
+        <div style="display:inline-flex;align-items:center;gap:14px;padding:12px 22px 12px 16px;border-radius:16px;background:#EDF2FA;box-shadow:0 1px 3px rgba(60,64,67,.3),0 4px 8px 3px rgba(60,64,67,.15);font-weight:500;color:#1F1F1F;font-size:14px"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke="#1F1F1F" stroke-width="1.8" stroke-linecap="round"/></svg> New</div>
+        <div style="position:absolute;left:40px;top:44px;width:240px;background:#F0F4F9;border-radius:8px;box-shadow:0 2px 6px 2px rgba(60,64,67,.15),0 1px 2px rgba(60,64,67,.3);padding:8px 0">
+          ${gRow(icFolder, 'New folder', '^C then F')}
+          <div style="height:1px;background:#DADCE0;margin:6px 0"></div>
+          ${gRow(icFile, 'File upload', '^C then U', true)}
+          ${gRow(icFolderUp, 'Folder upload', '^C then I')}
+        </div></div>`;
+    const artFile = `<div style="margin-top:10px;border:1px dashed #1F6F47;border-radius:12px;padding:10px 12px;background:#F3F5F0;font-size:12.5px;display:flex;align-items:center;gap:8px;overflow:hidden">${icon('download', 16)}<span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(state.backupGuide)}</span></div>`;
+    return `
+    <div class="modal-backdrop" style="z-index:3050" data-action="backup-guide-close">
+      <div class="modal-box" role="dialog" aria-label="Backup sa Google Drive" style="background:var(--panel);display:flex;flex-direction:column;gap:18px;max-width:460px" data-stop="1">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#1F6F47;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px">Na download na ✓</div>
+          <h2 style="margin:0;font-size:21px">Isang hakbang na lang: ilagay sa Google Drive</h2>
+        </div>
+        ${step(1, 'Buksan ang Google Drive', 'Pindutin ang button sa baba. Mag sign in kung hinihingi.')}
+        ${step(2, 'Pindutin ang <b>+ New</b>, tapos <b>File upload</b>', 'Nasa kaliwang taas ito ng Drive.', artNew)}
+        ${step(3, 'Piliin ang backup file', 'Nasa <b>Downloads</b> folder mo. Pwede mo rin itong i drag papunta sa Drive.', artFile)}
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+          <a class="btn-primary" href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none" data-action="backup-guide-open">${icon('cloud', 18)} Buksan ang Google Drive</a>
+          <button type="button" class="btn-ghost" data-action="backup-guide-close">Tapos na</button>
+        </div>
+        <div style="font-size:12.5px;color:var(--mut)">Tip: gawin ito linggo linggo. Pag nagpalit ka ng device, i download mo lang ang file sa Drive tapos pindutin ang <b>Restore mula sa backup</b>.</div>
+      </div>
+    </div>`;
+  }
   function modalLicense() {
     if (!LICENSE_REQUIRED || hasLicense()) return '';
     return `
@@ -4126,6 +4164,7 @@
       ${modalExpenseExport()}
       ${modalExpenseCategory()}
       ${modalShootStatus()}
+      ${modalBackupGuide()}
       ${modalLicense()}
       ${modalOnboarding()}
     `;
@@ -4560,6 +4599,8 @@
       case 'setup-finish': finishSetup(el.dataset.sample === '1'); break;
       case 'checklist-hide': setSettings({ checklistHidden: true }); break;
       case 'sample-clear': setState(s => ({ shoots: s.shoots.filter(x => !x.sample), clients: s.clients.filter(x => !x.sample), expenses: s.expenses.filter(x => !x.sample) })); break;
+      case 'backup-guide-close': setState({ backupGuide: null }); break;
+      case 'backup-guide-open': setTimeout(() => setState({ backupGuide: null }), 400); break;
       case 'settings-stage-add': setState(s => ({ settings: { ...s.settings, customStages: [...(s.settings.customStages || []), { id: 'c_' + Date.now().toString(36), name: '' }] } })); break;
       case 'settings-stage-del': {
         const sid = el.dataset.stage;
@@ -4594,16 +4635,18 @@
         const done = (msg) => { markBackupDone(); backupReminderDismissed = true; render(); showToast(msg); };
         let canShareFile = false;
         try { canShareFile = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) { canShareFile = false; }
-        if (canShareFile && navigator.share) {
+        const isTouch = (() => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
+        if (canShareFile && navigator.share && isTouch) {
           // Phones: the share sheet lists Google Drive, so the file lands in their Drive in one tap.
           navigator.share({ files: [file], title: 'Eksakto backup', text: 'Eksakto backup ' + TODAY_STR })
             .then(() => done('Tapos na ang backup! Kung Drive ang pinili mo, nandoon na ang file.'))
             .catch(err => { if (err && err.name === 'AbortError') return; triggerDownload(file, file.name); done('Na download na ang backup mo. I upload mo lang sa Google Drive mo.'); });
         } else {
           // Laptops: download the file, then open their Drive in a new tab so they can drop it in.
+          // Laptops: download the file, then show a short guide for putting it in Google Drive.
           triggerDownload(file, file.name);
-          try { window.open('https://drive.google.com/drive/my-drive', '_blank', 'noopener'); } catch (e) { /* popup blocked */ }
-          done('Na download na ang backup. Nagbukas ang Google Drive mo sa bagong tab, i drag mo lang doon ang file.');
+          markBackupDone(); backupReminderDismissed = true;
+          setState({ backupGuide: file.name });
         }
         break;
       }
@@ -5679,9 +5722,9 @@
       } else if (state.loanModal || state.loanPaymentModal || state.shootPaymentModal || state.goalModal || state.goalFundModal || state.clientModal || state.telegramModalOpen || state.chipModal) {
         e.preventDefault(); e.stopPropagation();
         closeModalOf(state.loanModal ? 'loan' : state.loanPaymentModal ? 'loanpayment' : state.shootPaymentModal ? 'shootpayment' : state.goalModal ? 'goal' : state.goalFundModal ? 'goalfund' : state.clientModal ? 'client' : state.telegramModalOpen ? 'telegram' : 'chip');
-      } else if (state.gearModal || state.shootStatusModal || state.rescheduleDraft || state.financeExportOpen || state.expenseExportOpen || state.financeBreakdown || state.expCatOpen || state.expReassignId || state.presetConfirm || state.quickAddOpen || state.moreOpen || state.mSearchOpen || state.globalSearch) {
+      } else if (state.backupGuide || state.gearModal || state.shootStatusModal || state.rescheduleDraft || state.financeExportOpen || state.expenseExportOpen || state.financeBreakdown || state.expCatOpen || state.expReassignId || state.presetConfirm || state.quickAddOpen || state.moreOpen || state.mSearchOpen || state.globalSearch) {
         e.preventDefault(); e.stopPropagation();
-        setState({ gearModal: null, shootStatusModal: null, rescheduleDraft: null, financeExportOpen: false, expenseExportOpen: false, financeBreakdown: null, expCatOpen: false, expReassignId: null, presetConfirm: null, quickAddOpen: false, moreOpen: false, mSearchOpen: false, globalSearch: '' });
+        setState({ backupGuide: null, gearModal: null, shootStatusModal: null, rescheduleDraft: null, financeExportOpen: false, expenseExportOpen: false, financeBreakdown: null, expCatOpen: false, expReassignId: null, presetConfirm: null, quickAddOpen: false, moreOpen: false, mSearchOpen: false, globalSearch: '' });
       }
     });
 
