@@ -111,6 +111,7 @@ td{padding:6px 4px;border-top:1px solid var(--line)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
+  var devCounts = null;
   var sb = supabase.createClient('https://edngzvnyajxudvbzmalg.supabase.co', 'sb_publishable_N3xc7VenyA933795z5Jsdw_Ud9pXhdf');
   var $ = function(id){ return document.getElementById(id); };
   var peso = function(n){ return '₱' + Number(n || 0).toLocaleString('en-PH'); };
@@ -152,7 +153,7 @@ td{padding:6px 4px;border-top:1px solid var(--line)}
       var actions = o.status === 'pending'
         ? (auto ? '' : '<button class="btn" data-ok="' + o.id + '">Approve</button><button class="btn bad" data-no="' + o.id + '">Reject</button>')
         : o.status === 'approved'
-          ? '<span class="key">' + esc(o.license_key) + '</span><button class="btn ghost" data-resend="' + o.id + '">I resend ang email</button><a class="btn ghost" target="_blank" rel="noopener" href="' + mailLink(o) + '">Manual email</a><button class="btn bad" data-refund="' + o.id + '">I refund</button>'
+          ? '<span class="key">' + esc(o.license_key) + '</span>' + (devCounts && o.license_key ? '<span class="pill" title="Devices na gumagamit ng key">' + (devCounts[o.license_key] || 0) + '/3 device</span>' : '') + '<button class="btn ghost" data-resend="' + o.id + '">I resend ang email</button><button class="btn ghost" data-resetdev="' + o.id + '">I reset ang devices</button><button class="btn ghost" data-replacekey="' + o.id + '">Palitan ang key</button><a class="btn ghost" target="_blank" rel="noopener" href="' + mailLink(o) + '">Manual email</a><button class="btn bad" data-refund="' + o.id + '">I refund</button>'
           : o.status === 'refunded' ? '<span class="key" style="text-decoration:line-through">' + esc(o.license_key || '') + '</span>'
           : '<button class="btn ghost" data-ok="' + o.id + '">Approve pa rin</button>';
       var refLine = auto ? 'PayMongo QR Ph' + (o.paymongo_payment_id ? ' · ' + esc(o.paymongo_payment_id) : '') : 'Ref ' + esc(o.gcash_ref);
@@ -163,13 +164,33 @@ td{padding:6px 4px;border-top:1px solid var(--line)}
   }
 
   function load(){
-    return Promise.all([sb.rpc('admin_orders', { p_status: null }), sb.rpc('shop_info')]).then(function(r){
+    return Promise.all([sb.rpc('admin_orders', { p_status: null }), sb.rpc('shop_info'), sb.rpc('admin_device_counts')]).then(function(r){
       if (r[0].error) { show('denied'); return; }
-      all = r[0].data || []; shop = r[1].data; show('app'); render();
+      all = r[0].data || []; shop = r[1].data; devCounts = r[2].error ? null : (r[2].data || {}); show('app'); render();
     });
   }
 
   $('orders').addEventListener('click', function(e){
+    var rd = e.target.closest('[data-resetdev]');
+    if (rd) {
+      var did = rd.getAttribute('data-resetdev'); var dor = all.find(function(x){ return x.id === did; });
+      if (!confirm('I reset ang devices ni ' + (dor ? dor.name : '') + '? Mababakante ang 3 slot. Ang mga device na naka activate ay kukuha ulit ng slot sa susunod nilang check.')) return;
+      rd.disabled = true;
+      sb.rpc('admin_reset_devices', { p_order: did }).then(function(r){ if (r.error || !r.data || !r.data.ok) { alert('Hindi gumana: ' + (r.error ? r.error.message : 'walang key')); rd.disabled = false; return; } alert('Na reset na. ' + r.data.removed + ' device ang natanggal.'); load(); });
+      return;
+    }
+    var rk = e.target.closest('[data-replacekey]');
+    if (rk) {
+      var kid = rk.getAttribute('data-replacekey'); var kor = all.find(function(x){ return x.id === kid; });
+      if (!confirm('Palitan ang key ni ' + (kor ? kor.name : '') + '? Mamamatay ang lumang key sa lahat ng device (sa loob ng ilang araw), at gagawa ng bago. Gamitin lang ito kung nag leak ang key.')) return;
+      rk.disabled = true;
+      sb.rpc('admin_replace_key', { p_order: kid }).then(function(r){
+        if (r.error || !r.data || !r.data.ok) { alert('Hindi gumana: ' + (r.error ? r.error.message : 'hindi approved ang order')); rk.disabled = false; return; }
+        alert('Bagong key: ' + r.data.license_key + '\nPindutin ang "I resend ang email" para maipadala ito sa customer.');
+        load();
+      });
+      return;
+    }
     var rs = e.target.closest('[data-resend]');
     if (rs) {
       var sid = rs.getAttribute('data-resend');
