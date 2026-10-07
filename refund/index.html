@@ -5,54 +5,108 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Refund Policy · Eksakto</title>
 <meta name="description" content="Refund Policy for Eksakto, the tracker for Filipino videographers and photographers.">
-<meta name="theme-color" content="#F3F5F0">
+<meta name="theme-color" content="#13221A">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' role='img' aria-label='eksakto icon'%3E%3Crect width='1024' height='1024' rx='232' fill='%2313221A'/%3E%3Cg transform='translate%28145.2 749.6%29 scale%280.9 -0.9%29'%3E%3Cpath fill='%23F3F5F0' d='M313 -14Q247 -14 195.0 3.5Q143 21 106.5 55.0Q70 89 51.0 139.0Q32 189 32 254Q32 317 50.5 370.0Q69 423 103.5 461.5Q138 500 188.5 521.0Q239 542 302 542Q366 542 414.5 521.5Q463 501 494.5 461.0Q526 421 541.0 363.5Q556 306 551 232L187 229Q192 168 222 138Q257 101 312 101Q339 101 357.0 108.5Q375 116 386.5 127.5Q398 139 404.5 153.0Q411 167 415 180L555 150Q547 113 529.5 83.0Q512 53 482.5 31.0Q453 9 411.5 -2.5Q370 -14 313 -14ZM191 313 404 315Q404 340 396 359Q383 390 358.0 404.5Q333 419 304 419Q269 419 242.5 400.0Q216 381 201 345Q195 331 191 313Z'/%3E%3Cpath fill='%23E8A33D' transform='translate%28553 0%29' d='M125 -13Q73 -13 47.5 9.0Q22 31 22 77Q22 124 47.5 146.0Q73 168 125 168Q178 168 204.0 146.0Q230 124 230 77Q230 -13 125 -13Z'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
 <style>
+:root{--ground:#F3F5F0;--ink:#13221A;--muted:#4F6357;--line:#DCE3D7;--tint:#E3EBDF;--brand:#1F6F47;--deep:#14502F;--gold:#E8A33D;--soft:#B7C7BB}
 *{box-sizing:border-box}
-body{margin:0;background:#F3F5F0;color:#13221A;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.65;font-size:16px}
-a{color:#1F6F47}
-.wrap{max-width:720px;margin:0 auto;padding:22px 20px 64px}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:36px}
-.logo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:24px;letter-spacing:-.5px;color:#13221A;text-decoration:none}
-.logo span{color:#1F6F47}
-h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-1.2px;line-height:1.05;margin:0 0 8px}
-.upd{font-size:14px;color:#5E6C63;margin-bottom:24px}
-.sum{background:#E3EBDF;border-radius:16px;padding:18px 20px;margin-bottom:32px;font-size:15px}
-.sum b{display:block;margin-bottom:4px}
-h2{font-size:19px;margin:32px 0 8px}
-p,li{color:#2C3B33}
-ul{padding-left:22px}
-footer{margin-top:48px;padding-top:20px;border-top:1px solid #DCE3D7;font-size:14px;color:#5E6C63;display:flex;gap:18px;flex-wrap:wrap}
-footer a{color:#5E6C63}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-size:16px;line-height:1.7}
+a{color:var(--brand)}
+.bric{font-family:'Bricolage Grotesque',sans-serif;font-weight:800}
+header{max-width:1180px;margin:0 auto;padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.5px;color:var(--ink);text-decoration:none}
+.logo span{color:var(--brand)}
+nav{display:flex;align-items:center;gap:28px;font-size:15px;font-weight:600}
+nav a{color:var(--ink);text-decoration:none}
+nav .pill{background:var(--ink);color:var(--ground);padding:12px 20px;border-radius:999px}
+.hero{max-width:820px;margin:8px auto 0;padding:0 24px}
+.hero-in{background:var(--ink);color:var(--ground);border-radius:28px;padding:48px 48px 40px;position:relative;overflow:hidden}
+.hero-in:after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;border-radius:50%;background:var(--gold);opacity:.14}
+.eyebrow{display:inline-block;background:rgba(232,163,61,.16);color:var(--gold);font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;letter-spacing:.3px}
+.hero h1{margin:16px 0 6px;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(38px,7vw,60px);line-height:1.02;letter-spacing:-1.8px}
+.hero h1 span{color:var(--gold)}
+.upd{color:var(--soft);font-size:14px}
+.tabs{display:flex;gap:8px;margin-top:28px;flex-wrap:wrap}
+.tab{color:var(--ground);text-decoration:none;font-weight:700;font-size:14px;padding:10px 18px;border-radius:999px;border:1px solid rgba(243,245,240,.22)}
+.tab:hover{border-color:var(--soft)}
+.tab.on{background:var(--ground);color:var(--ink);border-color:var(--ground)}
+.main{max-width:820px;margin:32px auto 0;padding:0 24px 88px}
+.toc{border:1px solid var(--line);border-radius:16px;margin:0 0 28px;background:#fff}
+.toc summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;font-weight:800;font-size:15px}
+.toc summary::-webkit-details-marker{display:none}
+.toc summary span{font-size:13px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:10px;white-space:nowrap;flex:none;margin-left:12px}
+.toc summary span:after{content:"";width:7px;height:7px;border-right:2px solid var(--brand);border-bottom:2px solid var(--brand);transform:rotate(45deg);margin-top:-4px;transition:transform .2s}
+.toc[open] summary span:after{transform:rotate(225deg);margin-top:4px}
+.toc ol{margin:0;padding:2px 18px 16px 40px;columns:2;column-gap:28px}
+.toc li{margin:4px 0;break-inside:avoid;font-size:14.5px}
+.toc li::marker{color:var(--brand);font-weight:700}
+.toc a{color:var(--ink);text-decoration:none;font-weight:600}
+.toc a:hover{color:var(--brand);text-decoration:underline}
+.card{background:#fff;border:1px solid var(--line);border-radius:24px;padding:40px 44px;box-shadow:0 30px 60px rgba(19,34,26,.06)}
+.sum{background:var(--tint);border-radius:18px;padding:20px 22px 20px 26px;margin-bottom:28px;position:relative;font-size:15.5px;line-height:1.6}
+.sum:before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:4px;background:var(--gold)}
+.sum b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:17px;margin-bottom:4px;color:var(--deep)}
+.card h2{display:flex;align-items:center;gap:12px;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px;letter-spacing:-.4px;margin:36px 0 10px;scroll-margin-top:24px}
+.card h2 .num{flex:none;font-family:Manrope,sans-serif;font-size:12px;font-weight:800;color:var(--brand);background:var(--tint);border-radius:8px;padding:4px 8px;letter-spacing:.5px}
+.card p,.card li{color:#2C3B33}
+.card ul{padding-left:22px;margin:8px 0}
+.card li{margin:4px 0}
+.card li::marker{color:var(--brand)}
+.card>p:first-of-type{font-size:15px;color:var(--muted)}
+.help{margin-top:36px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--ground);border-radius:18px;padding:20px 22px}
+.help a.btn{background:var(--brand);color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:12px}
+footer{background:var(--ink);color:var(--soft)}
+.f1{max-width:1180px;margin:0 auto;padding:40px 24px 16px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;font-size:14px}
+.f2{max-width:1180px;margin:0 auto;padding:0 24px 32px;display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px}
+footer a{color:var(--soft)}
+@media (max-width:860px){
+  nav a:not(.pill){display:none}
+  .toc ol{columns:1}
+  .hero-in{padding:32px 22px 28px;border-radius:22px}
+  .card{padding:26px 20px;border-radius:20px}
+  header,.hero,.main{padding-left:16px;padding-right:16px}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-<header><a class="logo" href="/">eksakto<span>.</span></a><a href="/" style="font-size:14px;color:#5E6C63;text-decoration:none">Back to home</a></header>
-<h1>Refund Policy</h1>
+<header><a class="logo" href="/">eksakto<span>.</span></a>
+<nav aria-label="Main"><a href="/#features">Features</a><a href="/#presyo">Presyo</a><a href="/#faq">FAQ</a><a class="pill" href="/#survey">Sali sa waitlist</a></nav></header>
+<section class="hero"><div class="hero-in">
+<span class="eyebrow">Legal</span>
+<h1>Refund Policy<span>.</span></h1>
 <div class="upd">Last updated: October 7, 2026</div>
+<div class="tabs"><a href="/terms/" class="tab">Terms</a><a href="/privacy/" class="tab">Privacy</a><a href="/refund/" class="tab on">Refunds</a></div>
+</div></section>
+<main class="main">
+<article class="card">
 <div class="sum"><b>Sa madaling salita</b>Kung hindi mo nagustuhan ang Eksakto, mag email ka lang sa loob ng 7 araw mula nang bumili ka, at ibabalik namin ang buong bayad mo. Walang maraming tanong.</div>
+<details class="toc"><summary>Laman ng page na ito <span>5 sections</span></summary><ol><li><a href="#s1">7 day money back guarantee</a></li><li><a href="#s2">How to ask for a refund</a></li><li><a href="#s3">What happens next</a></li><li><a href="#s4">After 7 days</a></li><li><a href="#s5">Duplicate or wrong payments</a></li></ol></details>
 
 <p>Eksakto is owned and operated by <b>Eksakto Software Publishing</b>, a business name registered with the Department of Trade and Industry (Business Name No. 8539609), City of Pasig, Philippines. Contact us at <a href="mailto:eksakto.app@gmail.com">eksakto.app@gmail.com</a>.</p>
-<h2>7 day money back guarantee</h2>
+<h2 id="s1"><span class="num">01</span>7 day money back guarantee</h2>
 <p>If Eksakto is not right for you, email us within <b>7 days</b> of your purchase and we will refund the full amount you paid.</p>
-<h2>How to ask for a refund</h2>
+<h2 id="s2"><span class="num">02</span>How to ask for a refund</h2>
 <ul>
 <li>Email <a href="mailto:eksakto.app@gmail.com">eksakto.app@gmail.com</a> from the email you used to buy.</li>
 <li>Include your name and your license key.</li>
 <li>Telling us why is optional, but it helps us improve.</li>
 </ul>
-<h2>What happens next</h2>
+<h2 id="s3"><span class="num">03</span>What happens next</h2>
 <p>The money back guarantee is available once per customer. We may decline requests that look like repeated or abusive use, for example buying and refunding again with another email.</p>
 <p>We will confirm within 3 business days. Approved refunds are sent back through our payment partner, PayMongo, to the original payment method where possible. Depending on your bank or e-wallet, it may take several business days to appear. Once refunded, your license key will be deactivated and the App will stop working on your devices the next time they go online. The records you entered stay on your device, so you can still export them.</p>
-<h2>After 7 days</h2>
+<h2 id="s4"><span class="num">04</span>After 7 days</h2>
 <p>Purchases are final after 7 days, except where the law requires otherwise. If something is not working, email us anyway and we will do our best to fix it.</p>
-<h2>Duplicate or wrong payments</h2>
+<h2 id="s5"><span class="num">05</span>Duplicate or wrong payments</h2>
 <p>If you were charged twice or paid the wrong amount by mistake, email us at any time and we will correct it.</p>
-
-<footer><a href="/terms/">Terms</a><a href="/privacy/">Privacy</a><a href="/refund/">Refunds</a><a href="mailto:eksakto.app@gmail.com">eksakto.app@gmail.com</a><span>© 2026 Eksakto Software Publishing</span></footer>
-</div>
+<div class="help"><div><b>May tanong?</b><br><span style="color:var(--muted);font-size:14.5px">Reply kami within 1 to 2 days.</span></div><a class="btn" href="mailto:eksakto.app@gmail.com">Email us</a></div>
+</article>
+</main>
+<footer>
+<div class="f1"><div class="bric" style="font-size:22px;color:var(--ground)">eksakto<span style="color:var(--gold)">.</span></div><span>Gawang Pinoy para sa Pinoy creatives</span><a href="/#survey">Sali sa waitlist</a></div>
+<div class="f2"><a href="/terms/">Terms</a><a href="/privacy/">Privacy</a><a href="/refund/">Refunds</a><a href="mailto:eksakto.app@gmail.com">eksakto.app@gmail.com</a><span>© 2026 Eksakto Software Publishing</span></div>
+</footer>
 </body>
 </html>
