@@ -511,6 +511,7 @@
   .sc-amt b{font-size:16px;font-weight:800}
   .sc-bal{font-size:12.5px;font-weight:800;color:#8A5A10;white-space:nowrap}
   .sc-bal.paid{color:var(--brand-deep)}.sc-bal.late{color:var(--danger)}.sc-bal.none{color:var(--mut)}
+  @media (min-width:761px){ .sc-amt b{white-space:nowrap;flex:none} .sc-amt .sc-bal{white-space:normal;text-align:right;min-width:0;line-height:1.25} }
   .sc-foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--mut)}
   .sc-move{all:unset;cursor:pointer;font-size:12px;font-weight:800;color:var(--brand);padding:4px 8px;border-radius:8px}
   .sc-move:hover{background:var(--tint)}
@@ -770,6 +771,10 @@
     .bc-dots{display:flex;gap:3px;margin-top:auto;margin-bottom:2px}
     .bc-dots i{width:5px;height:5px;border-radius:50%;background:var(--brand)}
     .bc-dots i.ed{background:var(--gold)}
+    .bc-cell.has.inq-only{background:#fff;border-style:dashed;border-color:#7F9186}
+    .bc-cell.has.inq-only.is-today{border-color:var(--ink)}
+    .bc-cell.has.inq-only.is-sel{border-color:var(--brand)}
+    .bc-dots i.inq{background:#fff;box-shadow:inset 0 0 0 1px #7F9186}
     .bc-wd div{font-size:10.5px;letter-spacing:0}
     .modal-box{padding:22px !important;border-radius:24px !important}
     .modal-title{font-size:22px !important}
@@ -854,7 +859,7 @@
   .chk-sample{font-size:13px;color:var(--mut);background:var(--tint);border-radius:12px;padding:10px 12px;margin:6px 0 8px}
   /* ================= Phone redesign (light) ================= */
   /* Subset font holding only the peso sign (DejaVu Sans regular), used in front of the phone font stacks. */
-  @font-face{font-family:'Eksakto Peso';src:url(data:font/woff2;base64,d09GMgABAAAAAAKEAA8AAAAABOAAAAIuAAJeuAAAAAAAAAAAAAAAAAAAAAAAAAAAGhQbIByBFh+BdgZWADQRDAqBGIEjATYCJAMICwYABCAFRAcgG94DKIYH+DXL92d+aLKXA8QSwwKCK5Ktq1p3spIAHGBydPPx7Efb7jnngMamNkd2YE3lQAoswNAC4hDcBoYnw0FkiDxZqklPBNQBQtwjs84G4exzL75aUYRaDdjyH/aoZclrrOOd5kbR3hFejTB91x0dvV5TfY873NOmG+s7e9ye+tasqUOz11R/Z9YKuGNqu6NzUxN9HdAOTXVHq7Gz8Y527Onv6MG+ho7G5E9VRs6ip137wg8ud3KdwqeQzBBvJ/cuwICyC004do0MMlRIBlQ3FmZuRJJ0mSAh73lCcjz/PoCTAeySyUBAiJXwoBy5o3JPETZMr0jf15AsISnn07QYkyQCEoDLG8652+mb5jfN55dVl4WnC+3hawRAghTLpAKWiTYhigKb5mu1mH9+eXEsStxJ9bshIuJInAGIgLihUMiPhiyU0wX3XPPuNWXZU1OryrJ3rn4ny2JWyMJwnfI91z3XsODpPe9lWXvFwmemS72/XHtl35UbX/h3quuiszY039x3ftwXz+u7cUPLxWdNdf1bvf6loav6jni+rzZSve/i8+t/u772z90Xn39fdcsvW6/dumwfEJDcenj42a8O37bw5N+LG4vgi3/ePAG++/XKI/5877+LKzeUPkFRAgKF9up6KtU/3/vnisoNAgAgia9qyK10toAkvdpeTeoEAFAUkdggFWJJsAp8VqJilXO06nWHVn06bXK5er06Xaleo35t7tAjBWofuFECAAA=) format('woff2');font-weight:100 900;size-adjust:90%;unicode-range:U+20B1}
+  @font-face{font-family:'Eksakto Peso';src:url(data:font/woff2;base64,d09GMgABAAAAAAKEAA8AAAAABOAAAAIuAAJeuAAAAAAAAAAAAAAAAAAAAAAAAAAAGhQbIByBFh+BdgZWADQRDAqBGIEjATYCJAMICwYABCAFRAcgG94DKIYH+DXL92d+aLKXA8QSwwKCK5Ktq1p3spIAHGBydPPx7Efb7jnngMamNkd2YE3lQAoswNAC4hDcBoYnw0FkiDxZqklPBNQBQtwjs84G4exzL75aUYRaDdjyH/aoZclrrOOd5kbR3hFejTB91x0dvV5TfY873NOmG+s7e9ye+tasqUOz11R/Z9YKuGNqu6NzUxN9HdAOTXVHq7Gz8Y527Onv6MG+ho7G5E9VRs6ip137wg8ud3KdwqeQzBBvJ/cuwICyC004do0MMlRIBlQ3FmZuRJJ0mSAh73lCcjz/PoCTAeySyUBAiJXwoBy5o3JPETZMr0jf15AsISnn07QYkyQCEoDLG8652+mb5jfN55dVl4WnC+3hawRAghTLpAKWiTYhigKb5mu1mH9+eXEsStxJ9bshIuJInAGIgLihUMiPhiyU0wX3XPPuNWXZU1OryrJ3rn4ny2JWyMJwnfI91z3XsODpPe9lWXvFwmemS72/XHtl35UbX/h3quuiszY039x3ftwXz+u7cUPLxWdNdf1bvf6loav6jni+rzZSve/i8+t/u772z90Xn39fdcsvW6/dumwfEJDcenj42a8O37bw5N+LG4vgi3/ePAG++/XKI/5877+LKzeUPkFRAgKF9up6KtU/3/vnisoNAgAgia9qyK10toAkvdpeTeoEAFAUkdggFWJJsAp8VqJilXO06nWHVn06bXK5er06Xaleo35t7tAjBWofuFECAAA=) format('woff2');font-weight:100 550;size-adjust:90%;unicode-range:U+20B1}@font-face{font-family:'Eksakto Peso';src:url(data:font/woff2;base64,d09GMgABAAAAAAI4AA4AAAAAA9gAAAHlAAJeuAAAAAAAAAAAAAAAAAAAAAAAAAAAGhQbIByBFgZWADQRDAqBHIEgATYCJAMICwYABCAFPgcgG98CAB6HsXukmdkhinDwG/HAtz/6O/NmIaY9276YEGEmWKGDpQmRiMLk2vaoZ62UpklM9uaYN7qlpJXIkUikTv5jR6+74/H428+B4LfvHMURBhRbkkYWWkCc7pBiV0e2FB1PtBBQDAg4o1CzVmFYNJYDOgn+A3rKCXAKVMdjrK0Ddowo2k9GwLptWhC0z/OYJw32GZ75PpFoICZov5OExnYn24zXSKSRQrTSRFUZ2KaUl2hexQEN40tVGG21ByGdjk855PTKOU9o5VdkTy2MlcSi/CzLTTEmQAQYvTDSA972q+1Xc13/qsOFPAp5hQCIyFAtE1AtaUeSBNqv/ufzs9FzLV+sHspABAkJPTEU4Pwr83Jb8zaaFB0cd+wA88XtjctDYSjKyg5P+E4oUnh+W32RwkfjHxUXpuK8wjDPfKb2QWFh/3mz2OBr0Z4w9kxd/N2df0aNpiBVSmgPba7n3Lu2Qk7Zla2BS/fuGdnDQvspd16Tgp9bqyLhPXwBAXHmFUn+ps+yDv6a35YPnv9qALz9MrbH97V/LpW9CxYBRL4IAnkr/i2Ud3xf+7Nn2W0BABDTbQtzjhsBQcxGgoB1TAIAyJcQtcqEVCCoRz8oyldvOIKgjSBieI3WJ2AEMUg9SuD/pkoAAA==) format('woff2');font-weight:551 900;size-adjust:90%;unicode-range:U+20B1}
   @media (max-width:760px){
     :root{--display:'Eksakto Peso','Manrope',system-ui,sans-serif;--body:'Eksakto Peso','Manrope',system-ui,sans-serif;--p-bg:#F6F7F5;--p-line:#ECEEEA;--p-line2:#E3E6E1;--p-mut:#8A948D;--p-mut2:#5E6B63;--p-green:#2E8B57;--p-red:#D23B2E;--p-track:#ECEEEA}
     .hero-num,.kpi .v{font-family:'Eksakto Peso','Bricolage Grotesque','Manrope',system-ui,sans-serif !important}
@@ -1089,7 +1094,7 @@
 </head>
 <body>
 <div id="app"></div>
-<script src="app.js?v=13"></script>
+<script src="app.js?v=15"></script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 </body>
 </html>

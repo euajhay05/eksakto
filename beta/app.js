@@ -153,6 +153,7 @@
     "cm.notes_ph": "hal. Referral ni Santos",
     "cm.submit_new": "I save ang client",
     "cm.err_name": "Ilagay muna ang pangalan ng client.",
+    "cm.dup_confirm": "May client na ring \"{name}\". I save pa rin bilang hiwalay na client?",
     "cm.delete_confirm": "Burahin ang client na \"{name}\"? Hindi na ito ma uundo.",
     "ms.payment": "Bayad",
     "ms.balance_label": "Balance",
@@ -224,6 +225,7 @@
     "comb.empty": "Walang kita na na record sa {month}.",
     "bd.remaining": "Natitirang balance · {month}",
     "bd.remaining_total": "Total na natitira",
+    "bd.remaining_all": "Lahat ng natitirang balance",
     "bd.raket": "Na collect sa raket · {month}",
     "bd.raket_total": "Total na na collect",
     "bd.package": "Total package value · {month}",
@@ -491,6 +493,7 @@
     "gear.kpi_net_recover": "Kulang pa para bawi",
     "tpl.client_ph": "[Pangalan ng Client]",
     "tpl.project_ph": "[Project o Service]",
+    "tpl.project_fallback": "napagkasunduang project",
     "tpl.date_ph": "[Date]",
     "docs.title": "Documents",
     "docs.sub": "Quotation, contract at SOA na may logo, handa nang ipadala",
@@ -568,6 +571,7 @@
     "prev.terms": "Payment terms",
     "prev.billed_by": "Galing kay",
     "prev.billed_to": "Para kay",
+    "prev.provider": "Service provider",
     "prev.no_items": "Walang nakalagay na item",
     "prev.total_package": "Total package",
     "prev.less_paid": "Bawas: nabayaran na",
@@ -1377,6 +1381,7 @@
     "cm.notes_ph": "e.g. Referred by Santos",
     "cm.submit_new": "Save client",
     "cm.err_name": "Enter the client's name first.",
+    "cm.dup_confirm": "A client named \"{name}\" already exists. Save as a separate client anyway?",
     "cm.delete_confirm": "Delete the client \"{name}\"? This can't be undone.",
     "ms.payment": "Payment",
     "ms.balance_label": "Balance",
@@ -1448,6 +1453,7 @@
     "comb.empty": "No income recorded in {month}.",
     "bd.remaining": "Remaining balance · {month}",
     "bd.remaining_total": "Total remaining",
+    "bd.remaining_all": "All remaining balances",
     "bd.raket": "Side gigs collected · {month}",
     "bd.raket_total": "Total collected",
     "bd.package": "Total package value · {month}",
@@ -1715,6 +1721,7 @@
     "gear.kpi_net_recover": "Left to recover",
     "tpl.client_ph": "[Client Name]",
     "tpl.project_ph": "[Project/Service]",
+    "tpl.project_fallback": "the agreed project",
     "tpl.date_ph": "[Date]",
     "docs.title": "Documents",
     "docs.sub": "Quotations, contracts and SOAs with the business logo, ready to send",
@@ -1792,6 +1799,7 @@
     "prev.terms": "Payment terms",
     "prev.billed_by": "Billed by",
     "prev.billed_to": "Billed to",
+    "prev.provider": "Service provider",
     "prev.no_items": "No items listed",
     "prev.total_package": "Total package",
     "prev.less_paid": "Less: paid to date",
@@ -1823,7 +1831,7 @@
     "expcat.gear": "Gear & equipment",
     "expcat.rental": "Gear rental",
     "expcat.transport": "Transport & fuel",
-    "expcat.food": "Food at shoots",
+    "expcat.food": "Food at shoot",
     "expcat.crew": "Talent & crew",
     "expcat.software": "Software & subscriptions",
     "expcat.props": "Props & venue",
@@ -2587,6 +2595,15 @@
   }
   // Peso amounts: whole numbers stay whole, anything with centavos always shows two decimals.
   function numPH(v) { const n = Math.round((Number(v) || 0) * 100) / 100; return n.toLocaleString('en-PH', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+  // One time move of the USD rate cache from the old key names.
+  (function migrateUsdRateKeys() {
+    try {
+      [['pol_usd_rate', 'eksakto_usd_rate'], ['pol_usd_rate_date', 'eksakto_usd_rate_date'], ['pol_usd_rate_ts', 'eksakto_usd_rate_ts']].forEach(([o, n]) => {
+        const v = localStorage.getItem(o);
+        if (v != null) { if (localStorage.getItem(n) == null) localStorage.setItem(n, v); localStorage.removeItem(o); }
+      });
+    } catch (e) { /* storage blocked */ }
+  })();
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function customStages() { return (S().customStages || []).filter(c => c && c.id); }
   function expenseCategories() {
@@ -2600,7 +2617,10 @@
   }
   function docText(key, lang) { return isDefaultDocText(key) ? tl(lang || docLang(), DOC_TEXT_IDS[key]) : String(S()[key] || ''); }
   function fillTemplate(tpl, d, mf) {
-    const map = { business: bizName(), owner: ownerName() || bizName(), client: d.clientName || td('tpl.client_ph'), project: d.description || td('tpl.project_ph'), date: d.date ? fmtDateShortYear(d.date) : td('tpl.date_ph'), amount: (mf || fmtMoney)(d.amount), valid: d.dueDate ? fmtDateShortYear(d.dueDate) : '' };
+    const proj = String(d.description || '').trim();
+    // No project typed: use a neutral phrase (without the quotes around it) instead of a "[Project]" placeholder.
+    if (!proj) tpl = String(tpl || '').replace(/["“]\{project\}["”]/g, '{project}');
+    const map = { business: bizName(), owner: ownerName() || bizName(), client: d.clientName || td('tpl.client_ph'), project: proj || td('tpl.project_fallback'), date: d.date ? fmtDateShortYear(d.date) : td('tpl.date_ph'), amount: (mf || fmtMoney)(d.amount), valid: d.dueDate ? fmtDateShortYear(d.dueDate) : '' };
     return String(tpl || '').replace(/\{(\w+)\}/g, (m, k) => (k in map ? map[k] : m));
   }
   function isOthersType(tt) { return /^(others?|iba pa)$/i.test(String(tt || '').trim()); }
@@ -2770,7 +2790,7 @@
   };
 
   const DOC_TYPE_META = {
-    contract:  { get title() { return t('doctype.contract'); }, body: (d, mf = fmtMoney) => fillTemplate(docText('tplContract'), d, mf) + (S().contractTerms ? ' ' + S().contractTerms : '') },
+    contract:  { get title() { return t('doctype.contract'); }, body: (d, mf = fmtMoney) => fillTemplate(docText('tplContract'), { ...d, date: d.eventDate || d.date }, mf) + (S().contractTerms ? ' ' + S().contractTerms : '') },
     quotation: { get title() { return t('docs.tile_quote'); },                      body: (d, mf = fmtMoney) => fillTemplate(docText('tplQuotation'), d, mf) + (d.dueDate ? ' ' + td('tpl.quote_valid_suffix', { date: fmtDateShortYear(d.dueDate) }) : '') },
     invoice:   { get title() { return t('docs.soa'); },           body: (d, mf = fmtMoney) => fillTemplate(docText('tplInvoice'), d, mf) },
   };
@@ -3239,8 +3259,8 @@
       gearSearch: '',
       docType: 'contract',
       invoiceCounter: Number(lsGet('shoottracker_invoice_counter')) || 1,
-      usdRate: (() => { try { return Number(lsGet('pol_usd_rate')) || 0; } catch (e) { return 0; } })(),
-      usdRateDate: (() => { try { return lsGet('pol_usd_rate_date') || ''; } catch (e) { return ''; } })(),
+      usdRate: (() => { try { return Number(lsGet('eksakto_usd_rate')) || 0; } catch (e) { return 0; } })(),
+      usdRateDate: (() => { try { return lsGet('eksakto_usd_rate_date') || ''; } catch (e) { return ''; } })(),
       docDatePickerOpen: false, docDateCalYear: TODAY.getFullYear(), docDateCalMonth: TODAY.getMonth(),
       docDuePickerOpen: false, docDueCalYear: TODAY.getFullYear(), docDueCalMonth: TODAY.getMonth(),
       docDraft: blankDocDraft(formatInvoiceNumber(Number(lsGet('shoottracker_invoice_counter')) || 1, 'soa')),
@@ -3572,15 +3592,17 @@
     const completed = shoots.filter(s => s.status === 'posted');
     // "Pending" / outstanding counts only confirmed shoots (Booked onward) —
     // Not-confirmed (tentative) shoots are excluded until they're actually booked.
-    const outstanding = shoots.filter(s => s.status !== 'tentative').reduce((sum, s) => sum + Math.max((Number(s.package) || 0) - (Number(s.paid) || 0), 0), 0);
+    const outstanding = shoots.filter(s => s.status !== 'tentative').reduce((sum, s) => sum + Math.max((Number(s.package) || 0) - shootPaidTotal(s), 0), 0);
 
     // Dashboard-card-specific: follows the dashMonthKey month switcher.
     const dashMonthItems = shoots.filter(s => { const dt = dashDateOf(s); return dt && dt.slice(0, 7) === dashMonthKey; });
     const dashMonthShoots = dashMonthItems.filter(s => s.serviceType !== 'edit');
     const dashMonthEdits = dashMonthItems.filter(s => s.serviceType === 'edit');
 
-    const upcomingList = shoots.filter(s => s.status !== 'posted' && s.daysLeft !== null)
-      .sort((a, b) => a.daysLeft - b.daysLeft).slice(0, 5);
+    // Home "Upcoming shoots": only shoots dated today or later, soonest first. Overdue and
+    // editing items are left out here; they already show in "Who hasn't paid" and on the board.
+    const upcomingList = shoots.filter(s => s.status !== 'posted' && s.serviceType !== 'edit' && s.date && s.date >= TODAY_STR)
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '99:99').localeCompare(b.time || '99:99')).slice(0, 5);
     const nextUpList = upcomingList.slice(0, 4).map(s => ({
       ...s,
       dayNum: s.date ? String(new Date(s.date + 'T00:00:00').getDate()) : '–',
@@ -3821,7 +3843,7 @@
     const expensesCalCells = buildExpenseCalendarCells(state.expensesDayCalYear, state.expensesDayCalMonth, expenses, expensesSelectedDate);
 
     // Per-month bar chart for a given year — a quick "monthly report" view, separate from the
-    // day-level calendar above, so Pol can see the whole year's spending pattern at a glance.
+    // day-level calendar above, to show the whole year's spending pattern at a glance.
     const expensesReportYear = state.expensesReportYear || TODAY.getFullYear();
     const expensesReportSelectedMonth = state.expensesReportSelectedMonth || THIS_MONTH_KEY;
     const expensesReportMonthsRaw = Array.from({ length: 12 }, (_, i) => {
@@ -3873,9 +3895,11 @@
     const monthShootsDated = monthShoots.filter(s => (s.date || '').slice(0, 7) === financeMonthKey);
     // Collected = payments whose DATE falls in this month (legacy shoots fall back to shoot date).
     const monthSideHustleCollected = monthShoots.reduce((sum, s) => sum + shootCollectedInMonth(s, financeMonthKey), 0);
-    // Remaining balance for the SELECTED month only (confirmed shoots, still unpaid) -
-    // so the Finances "Remaining Balance" card tracks the month picker like everything else here.
-    const monthOutstanding = monthShootsDated.filter(s => s.status !== 'tentative').reduce((sum, s) => sum + Math.max((Number(s.package) || 0) - shootPaidTotal(s), 0), 0);
+    // Unpaid balances are NOT month scoped: a client who still owes from an earlier month
+    // must stay visible on Payments (same figure as Home). Only income/expenses follow the month picker.
+    const openBalanceShoots = shoots.filter(s => s.status !== 'tentative' && Math.max((Number(s.package) || 0) - shootPaidTotal(s), 0) > 0);
+    const monthOutstanding = openBalanceShoots.reduce((sum, s) => sum + Math.max((Number(s.package) || 0) - shootPaidTotal(s), 0), 0);
+    const payListShoots = monthShoots.concat(openBalanceShoots.filter(s => !monthShoots.includes(s)));
     // Total package value of the SELECTED month's shoots (matches the table below the cards).
     const monthTotalPackage = monthShootsDated.reduce((sum, s) => sum + (Number(s.package) || 0), 0);
     const monthCombinedTotal = ftMonthTotal + monthSideHustleCollected;
@@ -4047,10 +4071,9 @@
       .slice(0, 5)
       .map(e => ({ description: e.description || t('common.untitled'), dateLabel: fmtDate(e.date), amountLabel: fmtMoney(e.amount) }));
 
-    // Outstanding (unpaid balance still to collect) for the selected month — confirmed shoots only.
-    const selMonthOutstanding = shoots
-      .filter(s => s.date && s.date.slice(0, 7) === selectedMonthKey && s.status !== 'tentative')
-      .reduce((a, s) => a + Math.max((Number(s.package) || 0) - (Number(s.paid) || 0), 0), 0);
+    // Outstanding (unpaid balance still to collect): every confirmed shoot, any month, so it
+    // matches Home, Payments and the "Outstanding balances" card.
+    const selMonthOutstanding = outstanding;
 
     return {
       view, shoots, navColor, goalCards, completed, outstanding,
@@ -4065,7 +4088,7 @@
       expensesReportYear, expensesReportMonths, expensesReportYearTotal,
       totalFullTime, monthFullTime, fullTimeRows, combinedTotal, fullTimeSharePercent, sideHustleSharePercent,
       financeMonthKey, financeMonthLabel, ftMonthTotal, ftMonthRows,
-      monthShoots, monthSideHustleCollected, monthCombinedTotal, monthFullTimeSharePercent, monthSideHustleSharePercent, monthOutstanding, monthTotalPackage,
+      monthShoots, payListShoots, openBalanceShoots, monthSideHustleCollected, monthCombinedTotal, monthFullTimeSharePercent, monthSideHustleSharePercent, monthOutstanding, monthTotalPackage,
       clientRows, activeClients, monthlyRevenue, netProfit, yearlyGoalIncome, yearlyProgressPercent,
       overviewBars, overviewYear,
       selMonthLabel, selMonthRevenue, selMonthExpenses, selMonthNetProfit, selMonthChartMax, selMonthOutstanding,
@@ -4271,6 +4294,13 @@
     const sh = state.shoots.reduce((a, x) => a + shootCollectedInMonth(x, mk), 0);
     const ft = !feat('salary') ? 0 : (state.fullTimeIncome || []).filter(f => (f.date || '').slice(0, 7) === mk).reduce((a, f) => a + (Number(f.amount) || 0), 0);
     return sh + ft;
+  }
+  // Expenses day panel follows the month picker: today in the current month, otherwise the
+  // latest day with an expense in that month (or the 1st when there is none).
+  function expDayForMonth(s, mk) {
+    if (mk === THIS_MONTH_KEY) return TODAY_STR;
+    const days = (s.expenses || []).map(e => e.date || '').filter(d => d.slice(0, 7) === mk).sort();
+    return days.length ? days[days.length - 1] : mk + '-01';
   }
   function monthSpend(mk) { return state.expenses.filter(e => (e.date || '').slice(0, 7) === mk).reduce((a, e) => a + (Number(e.amount) || 0), 0); }
   function shiftMonth(mk, n) { const d = new Date(Number(mk.slice(0, 4)), Number(mk.slice(5, 7)) - 1 + n, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
@@ -4523,12 +4553,12 @@
               const shown = dayShoots.slice(0, 2);
               const dlShown = dls.slice(0, Math.max(0, 2 - shown.length));
               const extra = dayShoots.length + dls.length - shown.length - dlShown.length;
-              return `<div class="bc-cell${c.isToday ? ' is-today' : ''}${c.isSelected ? ' is-sel' : ''}${dayShoots.length ? ' has' : (dls.length ? ' has-dl' : '')}" data-action="cal-select" data-date="${c.dateStr}">
+              return `<div class="bc-cell${c.isToday ? ' is-today' : ''}${c.isSelected ? ' is-sel' : ''}${dayShoots.length ? ' has' : (dls.length ? ' has-dl' : '')}${dayShoots.length && !dls.length && dayShoots.every(si => si.serviceType !== 'edit' && normalizeShootStatus(si.status) === 'tentative') ? ' inq-only' : ''}" data-action="cal-select" data-date="${c.dateStr}">
                   <span class="bc-num">${c.dayNum}</span>
                   ${shown.map(si => { const st = normalizeShootStatus(si.status); const cls = si.serviceType === 'edit' ? ' ed' : (st === 'tentative' ? ' inq' : ''); return `<div class="bc-ev${cls}" draggable="${canDrag()}" data-id="${esc(si.id)}" title="${esc(si.location ? t('cal.drag_hint', { client: si.client || '', location: si.location }) : t('cal.drag_hint_noloc', { client: si.client || '' }))}">${si.time ? esc(shortTime(si.time)) + ' ' : ''}<b>${esc(si.client || t('common.untitled'))}</b>${si.location ? `<small>${esc(si.location)}</small>` : ''}</div>`; }).join('')}
                   ${dlShown.map(si => `<div class="bc-ev dl" data-action="shoot-edit" data-id="${esc(si.id)}" title="${esc(t('cal.deadline_tip', { client: esc(si.client) }))}">${t('cal.deadline_item', { client: `<b>${esc(si.client || t('common.untitled'))}</b>` })}</div>`).join('')}
                   ${extra > 0 ? `<div class="bc-more">${t('cal.more', { n: extra })}</div>` : ''}
-                  ${dayShoots.length || dls.length ? `<span class="bc-dots">${dayShoots.slice(0, 3).map(si => `<i class="${si.serviceType === 'edit' ? 'ed' : ''}"></i>`).join('')}${dls.slice(0, 2).map(() => '<i class="ed"></i>').join('')}</span>` : ''}
+                  ${dayShoots.length || dls.length ? `<span class="bc-dots">${dayShoots.slice(0, 3).map(si => `<i class="${si.serviceType === 'edit' ? 'ed' : (normalizeShootStatus(si.status) === 'tentative' ? 'inq' : '')}"></i>`).join('')}${dls.slice(0, 2).map(() => '<i class="ed"></i>').join('')}</span>` : ''}
                 </div>`;
             }).join('')}
           </div>
@@ -4555,7 +4585,7 @@
       const mk = ctx.financeMonthKey;
       const shortDate = ds => ds ? new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
       const filter = state.payFilter || 'all';
-      const items = ctx.monthShoots.map(s => ({ s, info: shootDueInfo(s) }))
+      const items = ctx.payListShoots.map(s => ({ s, info: shootDueInfo(s) }))
         .filter(x => filter === 'all' || (filter === 'bal' ? x.info.balance > 0 : x.info.overdue))
         .sort((x, y) => (y.info.overdue - x.info.overdue) || ((y.info.balance > 0) - (x.info.balance > 0)) || (x.s.date || '9999').localeCompare(y.s.date || '9999'));
       const rows = items.map(({ s, info }) => {
@@ -4586,7 +4616,7 @@
       }).join('');
       const allDue = state.shoots.filter(x => x.status !== 'tentative').map(x => ({ s: x, info: shootDueInfo(x) })).filter(x => x.info.balance > 0);
       const nextDue = allDue.filter(x => !x.info.overdue && x.info.dueDate).sort((x, y) => x.info.dueDate.localeCompare(y.info.dueDate))[0] || allDue.sort((x, y) => y.info.daysOver - x.info.daysOver)[0];
-      const monthDue = ctx.monthShoots.filter(x => x.status !== 'tentative').map(x => shootDueInfo(x)).filter(i => i.balance > 0);
+      const monthDue = ctx.openBalanceShoots.map(x => shootDueInfo(x)).filter(i => i.balance > 0);
       const overdueN = monthDue.filter(i => i.overdue).length;
       const collectable = ctx.monthSideHustleCollected + ctx.monthOutstanding;
       const collPct = collectable > 0 ? Math.round(ctx.monthSideHustleCollected / collectable * 100) : 0;
@@ -4865,7 +4895,7 @@
       <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:6px;height:150px;padding:0 2px">
         ${ctx.expensesReportMonths.map(m => `
           <button type="button" data-action="expenses-report-month-pick" data-month="${m.monthKey}" title="${esc(m.monthLabel)} ${ctx.expensesReportYear}: ${m.totalLabel}" style="all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;height:100%;justify-content:flex-end;position:relative;cursor:pointer">
-            ${m.isSelected ? `<div style="position:absolute;top:-4px;transform:translateY(-100%);background:oklch(0.5 0.18 25);color:oklch(1 0 0);font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;white-space:nowrap">${m.totalLabel}</div>` : ''}
+            ${m.isSelected && m.total > 0 ? `<div style="position:absolute;top:-4px;transform:translateY(-100%);background:oklch(0.5 0.18 25);color:oklch(1 0 0);font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;white-space:nowrap">${m.totalLabel}</div>` : ''}
             <div style="width:60%;height:${m.heightPx}px;border-radius:6px 6px 0 0;background:${m.fill};flex:none"></div>
             <div style="font-size:11px;font-weight:600;color:${m.isSelected ? 'oklch(0.5 0.18 25)' : (m.isCurrentMonth ? 'oklch(0.4 0.13 150)' : 'oklch(0.5 0.015 150)')}">${m.shortLabel}</div>
           </button>`).join('')}
@@ -5157,7 +5187,7 @@
         <div class="field"><label>${t('docs.pick_client')}</label>
           <select data-action-change="doc-client-pick">
             <option value="">${t('docs.pick_client_opt')}</option>
-            ${state.clients.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}
+            ${state.clients.map(c => `<option value="${esc(c.id)}" ${state.docClientId === c.id && d.clientName === c.name ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
           </select>
         </div>
         <div class="field"><label>${t('docs.client_name')}</label><input type="text" value="${esc(d.clientName)}" data-bind="docDraft.clientName" placeholder="${esc(t('cm.name_ph'))}"/></div>
@@ -5242,12 +5272,12 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid oklch(0 0 0 / 0.08)">
           <div>
-            <div style="font-size:9.5px;font-weight:700;color:oklch(0.4 0.13 150);text-transform:uppercase;margin-bottom:6px">${td('prev.billed_by')}</div>
+            <div style="font-size:9.5px;font-weight:700;color:oklch(0.4 0.13 150);text-transform:uppercase;margin-bottom:6px">${docType === 'contract' ? td('prev.provider') : td('prev.billed_by')}</div>
             <div style="font-weight:700;font-size:13.5px;margin-bottom:2px">${esc(ownerName() || bizName())}</div>
             <div style="font-size:11.5px;color:oklch(0.5 0.015 150)">${esc(S().tagline || '')}${S().contactLine ? '<br>' + esc(S().contactLine) : ''}</div>
           </div>
           <div>
-            <div style="font-size:9.5px;font-weight:700;color:oklch(0.4 0.13 150);text-transform:uppercase;margin-bottom:6px">${td('prev.billed_to')}</div>
+            <div style="font-size:9.5px;font-weight:700;color:oklch(0.4 0.13 150);text-transform:uppercase;margin-bottom:6px">${docType === 'contract' ? td('pdf.client') : td('prev.billed_to')}</div>
             <div style="font-weight:700;font-size:13.5px;margin-bottom:2px">${esc(d.clientName) || t('tpl.client_ph')}</div>
             <div style="font-size:11.5px;color:oklch(0.5 0.015 150)">${esc(d.clientContact) || td('prev.no_contact')}</div>
           </div>
@@ -5399,6 +5429,8 @@
   }
   const APP_URL = () => location.origin + location.pathname.replace(/[^/]*$/, '');
   function authErr(msg) { authState = { ...authState, busy: false, error: msg, info: '' }; render(); }
+  // Auth messages are stored as dictionary keys and translated when drawn, so they follow the language switch.
+  function authMsg(v) { return v && (Object.prototype.hasOwnProperty.call(EN, v) || Object.prototype.hasOwnProperty.call(FIL, v)) ? t(v) : (v || ''); }
   function storeAccountLicense(key, email, name) {
     try { localStorage.setItem(LICENSE_LS, JSON.stringify({ key, ok: true, account: true, email: email || '', name: name || '', at: new Date().toISOString(), checkedAt: new Date().toISOString() })); } catch (e) { /* storage blocked */ }
   }
@@ -5410,12 +5442,12 @@
     }).then(lic => {
       if (!lic || !lic.ok) {
         const why = lic && lic.reason;
-        throw new Error(why === 'email_mismatch' ? t('auth.err_email_mismatch') : why === 'already_linked' ? t('auth.err_already_linked') : why === 'revoked' ? t('auth.err_license_inactive') : why === 'not_verified' ? t('auth.err_not_verified') : t('auth.err_no_license'));
+        throw new Error(why === 'email_mismatch' ? 'auth.err_email_mismatch' : why === 'already_linked' ? 'auth.err_already_linked' : why === 'revoked' ? 'auth.err_license_inactive' : why === 'not_verified' ? 'auth.err_not_verified' : 'auth.err_no_license');
       }
       return authFetch('/rest/v1/rpc/activate_license_v2', { body: { p_key: lic.license_key, p_device: deviceId(), p_label: deviceLabel() } }).then(a => {
-        if (!a.j || !a.j.ok) throw new Error(a.j && a.j.reason === 'device_limit' ? t('lic.device_limit') : t('auth.err_activate'));
+        if (!a.j || !a.j.ok) throw new Error(a.j && a.j.reason === 'device_limit' ? 'lic.device_limit' : 'auth.err_activate');
         storeAccountLicense(lic.license_key, email, lic.name || a.j.name);
-        authState = { mode: 'login', busy: false, error: '', info: '', email: '', key: '' };
+        authState = { mode: 'login', busy: false, error: '', info: '', email: '', key: '', pass: '' };
         licenseState = { busy: false, error: '' };
         const nm = lic.name || a.j.name;
         if (nm && !S().ownerName) setSettings({ ownerName: nm }); else render();
@@ -5425,62 +5457,65 @@
   }
   function authLogin(email, password) {
     email = String(email || '').trim().toLowerCase();
-    if (!email || !password) return authErr(t('auth.err_need_email_pass'));
+    authState = { ...authState, email, pass: String(password || '') };
+    if (!email || !password) return authErr('auth.err_need_email_pass');
     authState = { ...authState, email, busy: true, error: '', info: '' }; render();
     authFetch('/auth/v1/token?grant_type=password', { body: { email, password } }).then(r => {
       if (!r.ok) {
         const m = String((r.j && (r.j.error_description || r.j.msg || r.j.message)) || '');
         if (/confirm/i.test(m)) { authState = { ...authState, mode: 'sent', busy: false, error: '', info: '' }; render(); return; }
-        return authErr(t('auth.err_wrong_login'));
+        return authErr('auth.err_wrong_login');
       }
       const meta = (r.j.user && r.j.user.user_metadata) || {};
       return finishAccount(r.j.access_token, email, meta.license_key);
-    }).catch(e => authErr(e && e.message && !/fetch/i.test(e.message) ? e.message : t('auth.err_offline_login')));
+    }).catch(e => authErr(e && e.message && !/fetch/i.test(e.message) ? e.message : 'auth.err_offline_login'));
   }
   function authSignup(key, email, password) {
     key = String(key || '').trim().toUpperCase();
     email = String(email || '').trim().toLowerCase();
-    if (!/^EKS-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key)) return authErr(t('auth.err_key_format'));
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return authErr(t('auth.err_email'));
-    if (String(password || '').length < 8) return authErr(t('auth.err_pass_len'));
+    // Keep what was typed so a validation error never clears the form.
+    authState = { ...authState, key, email, pass: String(password || '') };
+    if (!/^EKS-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key)) return authErr('auth.err_key_format');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return authErr('auth.err_email');
+    if (String(password || '').length < 8) return authErr('auth.err_pass_len');
     authState = { ...authState, key, email, busy: true, error: '', info: '' }; render();
     authFetch('/rest/v1/rpc/precheck_signup', { body: { p_key: key, p_email: email } }).then(c => {
       const why = c.j && c.j.reason;
-      if (!c.j || !c.j.ok) return authErr(why === 'email_mismatch' ? t('auth.err_same_email') : why === 'already_linked' ? t('auth.err_key_has_account') : why === 'revoked' ? t('auth.err_key_inactive') : t('auth.err_key_invalid'));
+      if (!c.j || !c.j.ok) return authErr(why === 'email_mismatch' ? 'auth.err_same_email' : why === 'already_linked' ? 'auth.err_key_has_account' : why === 'revoked' ? 'auth.err_key_inactive' : 'auth.err_key_invalid');
       return authFetch('/auth/v1/signup?redirect_to=' + encodeURIComponent(APP_URL()), { body: { email, password, data: { license_key: key } } }).then(r => {
         if (!r.ok) {
           const m = String((r.j && (r.j.msg || r.j.error_description || r.j.message)) || '');
-          return authErr(/registered|exists/i.test(m) ? t('auth.err_email_taken') : /password/i.test(m) ? t('auth.err_pass_longer') : t('auth.err_signup'));
+          return authErr(/registered|exists/i.test(m) ? 'auth.err_email_taken' : /password/i.test(m) ? 'auth.err_pass_longer' : 'auth.err_signup');
         }
         if (r.j && r.j.access_token) return finishAccount(r.j.access_token, email, key);
         authState = { ...authState, mode: 'sent', busy: false, error: '', info: '' }; render();
       });
-    }).catch(() => authErr(t('auth.err_offline_signup')));
+    }).catch(() => authErr('auth.err_offline_signup'));
   }
   function authResend() {
     if (!authState.email) return;
     authState = { ...authState, busy: true, error: '', info: '' }; render();
     authFetch('/auth/v1/resend?redirect_to=' + encodeURIComponent(APP_URL()), { body: { type: 'signup', email: authState.email } })
-      .then(() => { authState = { ...authState, busy: false, info: t('auth.resent') }; render(); })
-      .catch(() => authErr(t('auth.err_resend')));
+      .then(() => { authState = { ...authState, busy: false, info: 'auth.resent' }; render(); })
+      .catch(() => authErr('auth.err_resend'));
   }
   function authForgot(email) {
     email = String(email || '').trim().toLowerCase();
-    if (!email) return authErr(t('auth.err_need_email'));
+    if (!email) return authErr('auth.err_need_email');
     authState = { ...authState, email, busy: true, error: '', info: '' }; render();
     authFetch('/auth/v1/recover?redirect_to=' + encodeURIComponent(APP_URL()), { body: { email } })
-      .then(() => { authState = { ...authState, busy: false, info: t('auth.reset_sent') }; render(); })
-      .catch(() => authErr(t('auth.err_offline')));
+      .then(() => { authState = { ...authState, busy: false, info: 'auth.reset_sent' }; render(); })
+      .catch(() => authErr('auth.err_offline'));
   }
   function authNewPassword(password) {
-    if (String(password || '').length < 8) return authErr(t('auth.err_pass_len'));
+    if (String(password || '').length < 8) return authErr('auth.err_pass_len');
     authState = { ...authState, busy: true, error: '' }; render();
     authFetch('/auth/v1/user', { method: 'PUT', token: recoveryToken, body: { password } }).then(r => {
-      if (!r.ok) return authErr(t('auth.err_link_expired'));
+      if (!r.ok) return authErr('auth.err_link_expired');
       const email = (r.j && r.j.email) || '';
       const meta = (r.j && r.j.user_metadata) || {};
       return finishAccount(recoveryToken, email, meta.license_key).then(() => { recoveryToken = ''; });
-    }).catch(e => authErr(e && e.message && !/fetch/i.test(e.message) ? e.message : t('auth.err_offline')));
+    }).catch(e => authErr(e && e.message && !/fetch/i.test(e.message) ? e.message : 'auth.err_offline'));
   }
   // Coming back from the verification or reset email: the token arrives in the URL hash.
   function handleAuthRedirect() {
@@ -5489,14 +5524,14 @@
     const errDesc = h.get('error_description');
     if (!token && !errDesc) return;
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
-    if (errDesc) { authState = { ...authState, mode: 'login', error: t('auth.err_link_used') }; return; }
+    if (errDesc) { authState = { ...authState, mode: 'login', error: 'auth.err_link_used' }; return; }
     if (type === 'recovery') { recoveryToken = token; authState = { ...authState, mode: 'newpass', error: '', info: '' }; return; }
-    authState = { ...authState, mode: 'login', busy: true, error: '', info: t('auth.verified') };
+    authState = { ...authState, mode: 'login', busy: true, error: '', info: 'auth.verified' };
     authFetch('/auth/v1/user', { method: 'GET', token }).then(u => {
       const email = (u.j && u.j.email) || '';
       const meta = (u.j && u.j.user_metadata) || {};
       return finishAccount(token, email, meta.license_key);
-    }).catch(e => authErr(e && e.message && !/fetch/i.test(e.message) ? e.message : t('auth.err_offline')));
+    }).catch(e => authErr(e && e.message && !/fetch/i.test(e.message) ? e.message : 'auth.err_offline'));
   }
   function modalLicense() {
     if (!needsAccount()) return '';
@@ -5504,8 +5539,8 @@
     const old = readLicense();
     const legacyKey = old && old.key && !old.account ? old.key : '';
     const field = (label, id, type, ph, val, extra) => `<div class="field"><label for="${id}">${label}</label><input type="${type}" id="${id}" value="${esc(val || '')}" placeholder="${ph}" ${extra || ''}/></div>`;
-    const errBox = a.error ? `<div style="font-size:13px;font-weight:700;color:var(--danger,#B5532A);line-height:1.45">${esc(a.error)}</div>` : '';
-    const infoBox = a.info ? `<div style="font-size:13px;font-weight:700;color:#14502F;background:#E3EBDF;border-radius:12px;padding:10px 12px;line-height:1.45">${esc(a.info)}</div>` : '';
+    const errBox = a.error ? `<div style="font-size:13px;font-weight:700;color:var(--danger,#B5532A);line-height:1.45">${esc(authMsg(a.error))}</div>` : '';
+    const infoBox = a.info ? `<div style="font-size:13px;font-weight:700;color:#14502F;background:#E3EBDF;border-radius:12px;padding:10px 12px;line-height:1.45">${esc(authMsg(a.info))}</div>` : '';
     const btn = (label) => `<button type="submit" class="btn-primary" style="justify-content:center;height:52px;font-size:15px" ${a.busy ? 'disabled' : ''}>${a.busy ? t('auth.busy') : label}</button>`;
     const tabs = `<div style="display:flex;background:#F3F5F0;border-radius:14px;padding:4px">
         <button type="button" data-action="auth-mode" data-mode="login" style="all:unset;cursor:pointer;flex:1;text-align:center;height:42px;border-radius:10px;font-weight:800;font-size:14px;${a.mode === 'login' || a.mode === 'forgot' ? 'background:#fff;color:#13221A;box-shadow:0 1px 3px rgba(19,34,26,.12)' : 'color:#4F6357'}">${t('auth.tab_login')}</button>
@@ -5538,13 +5573,13 @@
         <div style="font-size:13.5px;color:var(--text-dim);line-height:1.5">${legacyKey ? t('auth.signup_legacy') : t('auth.signup_sub')}</div>
         ${field(t('auth.license_key'), 'auth-key', 'text', t('auth.key_ph'), a.key || legacyKey || licenseState.key, 'autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:1px" required')}
         ${field(t('rm.email'), 'auth-email', 'email', t('auth.buy_email_ph'), a.email, 'autocomplete="email" required')}
-        ${field(t('auth.create_pass'), 'auth-pass', 'password', t('auth.pass_min_ph'), '', 'autocomplete="new-password" minlength="8" required')}
+        ${field(t('auth.create_pass'), 'auth-pass', 'password', t('auth.pass_min_ph'), a.pass || '', 'autocomplete="new-password" minlength="8" required')}
         ${infoBox}${errBox}${btn(t('auth.tab_signup'))}
         <div style="font-size:12.5px;color:var(--text-dim);text-align:center">${t('auth.no_key')} <a href="/bili" style="color:var(--accent1);font-weight:700">${t('auth.buy')}</a></div></form>`;
     } else {
       body = `<form data-action="auth-login" style="display:flex;flex-direction:column;gap:14px">
         ${field(t('rm.email'), 'auth-email', 'email', t('auth.acct_email_ph'), a.email, 'autocomplete="email" required')}
-        <div class="field"><label for="auth-pass" style="display:flex;justify-content:space-between">${t('auth.password')} <button type="button" class="btn-link" data-action="auth-mode" data-mode="forgot" style="font-size:12.5px">${t('auth.forgot_link')}</button></label><input type="password" id="auth-pass" placeholder="${esc(t('auth.password_ph'))}" autocomplete="current-password" required/></div>
+        <div class="field"><label for="auth-pass" style="display:flex;justify-content:space-between">${t('auth.password')} <button type="button" class="btn-link" data-action="auth-mode" data-mode="forgot" style="font-size:12.5px">${t('auth.forgot_link')}</button></label><input type="password" id="auth-pass" value="${esc(a.pass || '')}" placeholder="${esc(t('auth.password_ph'))}" autocomplete="current-password" required/></div>
         ${infoBox}${errBox}${btn(t('auth.tab_login'))}
         <div style="font-size:12.5px;color:var(--text-dim);text-align:center">${t('auth.new_here')} <button type="button" class="btn-link" data-action="auth-mode" data-mode="signup" style="font-size:12.5px;font-weight:800">${t('auth.signup_with_key')}</button></div></form>`;
     }
@@ -5558,24 +5593,6 @@
         ${inner}
       </div>
     </div>`;
-  }
-  function activateLicense(key) {
-    key = String(key || '').trim().toUpperCase();
-    if (!/^EKS-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key)) { licenseState = { key, busy: false, error: t('lic.err_format') }; render(); return; }
-    licenseState = { key, busy: true, error: '' }; render();
-    fetch(LICENSE_API.url + '/rest/v1/rpc/activate_license_v2', { method: 'POST', headers: { apikey: LICENSE_API.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: key, p_device: deviceId(), p_label: deviceLabel() }) })
-      .then(r => r.json())
-      .then(r => {
-        if (r && r.ok) {
-          try { localStorage.setItem(LICENSE_LS, JSON.stringify({ key, ok: true, name: r.name || '', at: new Date().toISOString(), checkedAt: new Date().toISOString() })); } catch (e) { /* storage blocked */ }
-          licenseState = { busy: false, error: '' };
-          if (r.name && !S().ownerName) setSettings({ ownerName: r.name }); else render();
-        } else {
-          const why = r && r.reason;
-          licenseState = { key, busy: false, error: why === 'device_limit' ? t('lic.device_limit') : why === 'revoked' ? t('lic.err_revoked') : t('lic.err_invalid') }; render();
-        }
-      })
-      .catch(() => { licenseState = { key, busy: false, error: t('lic.err_offline') }; render(); });
   }
 
   /* ---------------- guided setup (first run) ---------------- */
@@ -5602,7 +5619,7 @@
   function modalOnboarding() {
     if (S().onboarded || needsAccount()) return '';
     const d = setupDraft();
-    const steps = 5;
+    const steps = 6;
     const dots = `<div class="su-dots">${Array.from({ length: steps }, (_, i) => `<span class="${i <= d.step ? 'on' : ''}"></span>`).join('')}</div>`;
     const back = d.step > 0 ? `<button type="button" class="su-back" data-action="setup-back">${t('su.back')}</button>` : '<span></span>';
     const choice = (action, key, on, title, hint, ic) => `<button type="button" class="su-choice${on ? ' on' : ''}" data-action="${action}" data-key="${key}">${ic ? icon(ic, 22) : ''}<span><b>${title}</b><small>${hint}</small></span><i class="su-check">${on ? icon('check', 14) : ''}</i></button>`;
@@ -5914,7 +5931,7 @@
         <div class="card-title">${t('ec.title')}</div>
         <div class="set-sub">${t('ec.sub')}</div>
         <div class="set-rows">
-          ${(st.expenseCategories || []).map((tt, i) => `<div class="set-row"><div class="field" style="flex:1;margin:0">${text(`settings.expenseCategories.${i}`, tt, t('ec.ph'))}</div>${delBtn('settings-list-del" data-list="expenseCategories', i)}</div>`).join('')}
+          ${(st.expenseCategories || []).map((tt, i) => `<div class="set-row"><div class="field" style="flex:1;margin:0">${text(`settings.expenseCategories.${i}`, dataLabelId(tt) ? dl(tt) : tt, t('ec.ph'))}</div>${delBtn('settings-list-del" data-list="expenseCategories', i)}</div>`).join('')}
         </div>
         <button type="button" class="btn-ghost" data-action="settings-list-add" data-list="expenseCategories">${icon('plus', 16)} ${t('ec.add')}</button>
       </section>
@@ -6580,8 +6597,8 @@
     const ftMonth = state.fullTimeIncome.filter(f => f.date && f.date.slice(0, 7) === mKey);
     let title = '', rows = [], totalLabel = '';
     if (key === 'remaining') {
-      title = (t('bd.remaining', { month: mLabel })); totalLabel = t('bd.remaining_total');
-      rows = monthShoots.filter(s => s.status !== 'tentative').map(s => ({ label: s.client || t('common.untitled'), sub: s.location || '', amount: Math.max((Number(s.package) || 0) - shootPaidTotal(s), 0) })).filter(x => x.amount > 0);
+      title = t('bd.remaining_all'); totalLabel = t('bd.remaining_total');
+      rows = state.shoots.filter(s => s.status !== 'tentative').map(s => ({ label: s.client || t('common.untitled'), sub: [s.location || '', s.date ? fmtDate(s.date) : ''].filter(Boolean).join(' · '), amount: Math.max((Number(s.package) || 0) - shootPaidTotal(s), 0) })).filter(x => x.amount > 0);
     } else if (key === 'sidehustle') {
       title = (t('bd.raket', { month: mLabel })); totalLabel = t('bd.raket_total');
       const rowsSH = [];
@@ -6913,8 +6930,11 @@
     const previewRemaining = Math.max(0, remaining - amt);
     const history = shootPaymentsOf(s).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || ''));
     // Quick amounts follow the payment schedule in Settings, plus the exact remaining balance.
-    const quick = milestoneDefs().map(m => ({ label: m.shortLabel, amount: Math.round(pkg * m.weight / 100) }))
-      .concat(remaining > 0 ? [{ label: t('paym.full_balance'), amount: remaining }] : []);
+    // A milestone chip is hidden once the payments so far already cover it (e.g. no "50% Down" after the down payment).
+    let cumPct = 0;
+    const quick = milestoneDefs().map(m => { cumPct += Number(m.weight) || 0; return { label: m.shortLabel, amount: Math.round(pkg * m.weight / 100), coveredAt: pkg * cumPct / 100 }; })
+      .filter(q => paidT + 0.005 < q.coveredAt).map(({ label, amount }) => ({ label, amount }));
+    if (remaining > 0 && !quick.some(q => Math.abs(q.amount - remaining) < 0.005)) quick.push({ label: t('paym.full_balance'), amount: remaining });
     if (isPhoneLayout()) {
       const ms = milestoneDefs();
       const firstMs = ms[0];
@@ -6960,7 +6980,6 @@
           <div class="field"><label>${t('paym.amount')}</label><div class="money-in"><input type="text" inputmode="decimal" value="${esc(formatMoneyLiveDisplay(d.amount))}" data-bind="shootPaymentDraft.amount" data-fmt="money" placeholder="0" autofocus required/></div></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             ${quick.map(q => `<button type="button" data-action="shoot-payment-quick" data-amount="${q.amount}" data-label="${esc(q.label)}" style="all:unset;cursor:pointer;padding:5px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:var(--card2);color:oklch(0.35 0.02 150)">${esc(q.label)} (${fmtMoney(q.amount)})</button>`).join('')}
-            ${remaining > 0 ? `<button type="button" data-action="shoot-payment-quick" data-amount="${remaining}" data-label="Payment" style="all:unset;cursor:pointer;padding:5px 10px;border-radius:20px;font-size:11.5px;font-weight:600;background:var(--card2);color:oklch(0.35 0.02 150)">${t('paym.pay_remaining', { amount: fmtMoney(remaining) })}</button>` : ''}
           </div>
           ${dpField(t('paym.date'), 'shootPaymentDraft.date', d.date || '', { align: 'left', placeholder: t('common.today') })}
           <div style="font-size:12.5px;color:oklch(0.45 0.015 150)">${t('paym.new_remaining', { amount: `<strong>${fmtMoney(previewRemaining)}</strong>` })}${previewRemaining === 0 && amt > 0 ? t('paym.paid_up') : ''}</div>
@@ -6999,7 +7018,7 @@
       extra = { currency: 'USD', billingKind: 'invoice', amount: String(usd), lineItems: items.length ? items.join('\n') : `${desc} - $${usd.toLocaleString('en-US')}`, packageTotal: '', paidToDate: '', milestoneLabel: '', paymentStatus: 'Unpaid' };
     } else if (isRealEstate) {
       const dec = decorate(dr);
-      const grandTotal = Number(dr.package) || 0, paid = Number(dr.paid) || 0;
+      const grandTotal = Number(dr.package) || 0, paid = shootPaidTotal(dr);
       const addons = dr.addons || {};
       const addonsTotal = addonDefs().reduce((sum, ad) => sum + (addons[ad.key] || 0) * ad.price, 0);
       const baseAmt = grandTotal - addonsTotal;
@@ -7009,11 +7028,32 @@
       const { next, due } = nextMilestoneDue(grandTotal, paid);
       extra = { currency: 'PHP', billingKind: 'soa', amount: String(due), lineItems, packageTotal: String(grandTotal), paidToDate: String(paid), milestoneLabel: next ? next.label : t('ms.fully_paid'), paymentStatus: due > 0 ? 'Unpaid' : 'Paid', packageKey: (dr.packageTier && dr.packageTier !== 'custom') ? dr.packageTier : '' };
     } else {
-      const pkg = Number(dr.package) || 0, paid = Number(dr.paid) || 0;
+      const pkg = Number(dr.package) || 0, paid = shootPaidTotal(dr);
       const remaining = Math.max(pkg - paid, 0);
       extra = { currency: 'PHP', billingKind: 'soa', amount: String(remaining || pkg), lineItems: items.length ? items.join('\n') : `${desc} - ${fmtMoney(pkg)}`, packageTotal: String(pkg), paidToDate: String(paid), milestoneLabel: '', paymentStatus: remaining > 0 ? 'Unpaid' : 'Paid' };
     }
     return { kind, contact, desc, extra, foreign };
+  }
+  // Docs: the shoot to bill or quote when a client is picked. An unpaid confirmed shoot comes first,
+  // then the most recent one.
+  function docShootForClient(c) {
+    const nm = String((c && c.name) || '').trim().toLowerCase();
+    const list = state.shoots.filter(x => String(x.client || '').trim().toLowerCase() === nm).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    return list.find(x => x.status !== 'tentative' && Math.max((Number(x.package) || 0) - shootPaidTotal(x), 0) > 0) || list[0] || null;
+  }
+  // Fresh document fields for a picked client, so nothing carries over from the previous document.
+  // SOA uses the same billingFromShoot path as "Create SOA" on Home (payments already subtracted).
+  function docDraftForClient(s, c, docType) {
+    const contact = [c.phone, c.email].filter(Boolean).join(' · ');
+    const base = { ...s.docDraft, clientName: c.name, clientContact: contact, description: '', amount: '', lineItems: '', packageKey: '', packageTotal: '', paidToDate: '', milestoneLabel: '', paymentStatus: 'Unpaid', currency: 'PHP', eventDate: '' };
+    const sh = docShootForClient(c);
+    if (!sh) return base;
+    if (docType === 'invoice') {
+      const b = billingFromShoot(sh);
+      return { ...base, clientContact: contact || b.contact, description: b.desc, date: TODAY_STR, dueDate: addDays(TODAY_STR, 10), invoiceNumber: nextInvoiceNumber(s, b.kind), ...b.extra };
+    }
+    const tier = sh.packageTier && sh.packageTier !== 'custom' ? sh.packageTier : '';
+    return { ...base, description: projectTypeLabel(sh) || '', amount: String(Number(sh.package) || 0), packageKey: tier, eventDate: sh.date || '' };
   }
 
   // ---- payment methods (Settings > Paano ka babayaran) ----
@@ -7030,6 +7070,17 @@
   const DEFAULT_REMIND_TPL = 'Hi {client}! Friendly reminder lang po sa {what} na {amount}, {due}.\n\nPwede po kayong magbayad dito:\n{payment}\n\nPaki send na lang po ng screenshot pag nakapagbayad na kayo. Salamat po!\n{business}';
   function isDefaultRemindTpl(v) { const s = String(v || '').trim(); return !s || s === DEFAULT_REMIND_TPL.trim() || s === FIL['rm.template'].trim() || s === EN['rm.template'].trim(); }
   function remindTemplateText() { const s = String(S().remindTemplate || '').trim(); return isDefaultRemindTpl(s) ? t('rm.template') : s; }
+  // Greeting name for reminders. Client records are often named after the project ("Santos Wedding",
+  // "Kopi Co"), so only use a first name when the name looks like a person; otherwise a neutral greeting.
+  const NOT_A_PERSON_RE = /\b(wedding|kasal|prenup|pre nup|debut|birthday|bday|christening|binyag|baptism|anniversary|event|events|party|family|corporate|corp|co|inc|ltd|llc|company|studio|studios|films|productions?|cafe|café|restaurant|resto|shop|store|brand|shoot|session|project|realty|properties|hotel|resort|church|school|foundation|group|team|agency|media|ph|org)\b\.?/i;
+  function remindGreetName(name) {
+    const n = String(name || '').trim();
+    if (!n || NOT_A_PERSON_RE.test(n) || /[0-9&@]/.test(n)) return '';
+    const words = n.split(/\s+/);
+    if (words.length > 4) return '';
+    if (/^(de|dela|del|delos|de los|san|sta|sto|santa|santo)\.?$/i.test(words[0])) return '';
+    return words[0];
+  }
   function remindMessage(sh) {
     const info = shootDueInfo(sh);
     const amt = info.due > 0 ? info.due : info.balance;
@@ -7038,7 +7089,7 @@
       : info.days === 0 ? t('rm.due_today')
       : t('rm.due_on', { date: fmtDateShortYear(info.dueDate) });
     const map = {
-      client: firstName(sh.client) || t('rm.client_fallback'),
+      client: remindGreetName(sh.client) || t('rm.client_fallback'),
       amount: fmtMoney(amt),
       due,
       what: t('rm.what', { label: dl(info.label).toLowerCase(), project: String(sh.client || 'project').trim() }),
@@ -7613,6 +7664,10 @@
     });
   }
 
+  // Snapshot of the shoot form when it opened, so closing an untouched form skips the discard prompt.
+  let shootDraftSnapshot = '';
+  function shootDraftDirty() { try { return !!state.draft && JSON.stringify(state.draft) !== shootDraftSnapshot; } catch (e) { return true; } }
+  function askCloseShoot() { if (shootDraftDirty()) setState({ shootConfirmCloseOpen: true }); else setState({ modal: null, draft: null, shootConfirmCloseOpen: false }); }
   function openAddShoot(presetDate, lockDate) {
     const initialDate = presetDate || TODAY_STR;
     const calBase = new Date(initialDate + 'T00:00:00');
@@ -7623,6 +7678,7 @@
       draftDateLocked: !!lockDate, shootLocOpen: false, pfStep: 'quick', pfClientEdit: true, pfAmountEdit: false,
       draft: { id: null, client: '', location: '', date: presetDate || '', deadline: '', time: '', status: 'idea', scriptStatus: 'Not Started', shootType: 'Real Estate', serviceType: 'shoot', currency: 'PHP', notes: '', packageTier: '', package: '', paid: '', paidDate: '', addons: {} },
     });
+    shootDraftSnapshot = JSON.stringify(state.draft);
   }
   function openEditShoot(id) {
     const sh = state.shoots.find(s => s.id === id);
@@ -7647,6 +7703,8 @@
       draftDateLocked: false, shootLocOpen: false, pfStep: 'quick', pfClientEdit: false, pfAmountEdit: false,
       draft: { packageTier: 'custom', shootType: 'General Project', serviceType: 'shoot', addons: {}, ...sh, package: basePackage },
     });
+    shootDraftSnapshot = JSON.stringify(state.draft);
+    if (sh.currency === 'USD') refreshUsdRate();
   }
   function openEditLoan(id) {
     const l = state.loans.find(x => x.id === id);
@@ -7729,7 +7787,7 @@
       }
       case 'qa-doc': {
         try { localStorage.setItem('shoottracker_last_view', 'docs'); } catch (e2) { /* ignore */ }
-        state = { ...state, view: 'docs', quickAddOpen: false, moreOpen: false, editingDocId: null, docsHistoryOpen: false };
+        state = { ...state, view: 'docs', quickAddOpen: false, moreOpen: false, editingDocId: null, docsHistoryOpen: false, docClientId: null, docDraft: { ...blankDocDraft(state.docDraft.invoiceNumber), notes: state.docDraft.notes || '' } };
         handleAction('doc-type', el, ev);
         window.scrollTo(0, 0);
         break;
@@ -7786,7 +7844,7 @@
         const dr = state.draft || {};
         const { kind, contact, desc, extra } = billingFromShoot(dr);
         setState(s => ({
-          view: 'docs', docType: 'invoice', modal: null, draft: null, docsHistoryOpen: false,
+          view: 'docs', docType: 'invoice', modal: null, draft: null, docsHistoryOpen: false, docClientId: null,
           docDraft: { ...s.docDraft, clientName: dr.client || '', clientContact: contact || s.docDraft.clientContact, description: desc, date: TODAY_STR, dueDate: addDays(TODAY_STR, 10), invoiceNumber: nextInvoiceNumber(s, kind), notes: s.docDraft.notes || '', packageKey: '', ...extra },
         }));
         try { localStorage.setItem('shoottracker_last_view', 'docs'); } catch (e) { /* ignore */ }
@@ -7849,7 +7907,7 @@
       case 'shoot-service-pick': setState(s => ({ draft: { ...s.draft, serviceType: el.dataset.service } })); break;
       case 'shoot-project-add': setState(s => ({ draft: { ...s.draft, projectItems: [...(Array.isArray(s.draft.projectItems) ? s.draft.projectItems : []), ''] } })); break;
       case 'shoot-project-remove': setState(s => { const arr = (Array.isArray(s.draft.projectItems) ? s.draft.projectItems : []).slice(); arr.splice(Number(el.dataset.idx), 1); return { draft: { ...s.draft, projectItems: arr } }; }); break;
-      case 'shoot-currency-pick': setState(s => ({ draft: { ...s.draft, currency: el.dataset.currency } })); break;
+      case 'shoot-currency-pick': setState(s => ({ draft: { ...s.draft, currency: el.dataset.currency } })); if (el.dataset.currency === 'USD') refreshUsdRate(); break;
       case 'shoot-loc-toggle': setState(s => ({ shootLocOpen: true })); break;
       case 'shoot-addons-toggle': setState(s => ({ shootAddonsOpen: !s.shootAddonsOpen })); break;
       case 'shoot-addon-inc': setState(s => ({ draft: { ...s.draft, addons: { ...s.draft.addons, [el.dataset.key]: ((s.draft.addons && s.draft.addons[el.dataset.key]) || 0) + 1 } } })); break;
@@ -7931,15 +7989,15 @@
         const [y, m] = (s.expensesMonthKey || THIS_MONTH_KEY).split('-').map(Number);
         const d = new Date(y, m - 2, 1);
         const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        return { expensesMonthKey: mk, expensesDayCalYear: d.getFullYear(), expensesDayCalMonth: d.getMonth(), expensesReportSelectedMonth: mk };
+        return { expensesMonthKey: mk, expensesDayCalYear: d.getFullYear(), expensesDayCalMonth: d.getMonth(), expensesReportSelectedMonth: mk, expensesSelectedDate: expDayForMonth(s, mk) };
       }); break;
       case 'expenses-month-next': setState(s => {
         const [y, m] = (s.expensesMonthKey || THIS_MONTH_KEY).split('-').map(Number);
         const d = new Date(y, m, 1);
         const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        return { expensesMonthKey: mk, expensesDayCalYear: d.getFullYear(), expensesDayCalMonth: d.getMonth(), expensesReportSelectedMonth: mk };
+        return { expensesMonthKey: mk, expensesDayCalYear: d.getFullYear(), expensesDayCalMonth: d.getMonth(), expensesReportSelectedMonth: mk, expensesSelectedDate: expDayForMonth(s, mk) };
       }); break;
-      case 'expenses-month-today': setState({ expensesMonthKey: THIS_MONTH_KEY, expensesDayCalYear: TODAY.getFullYear(), expensesDayCalMonth: TODAY.getMonth(), expensesReportSelectedMonth: THIS_MONTH_KEY }); break;
+      case 'expenses-month-today': setState({ expensesSelectedDate: TODAY_STR, expensesMonthKey: THIS_MONTH_KEY, expensesDayCalYear: TODAY.getFullYear(), expensesDayCalMonth: TODAY.getMonth(), expensesReportSelectedMonth: THIS_MONTH_KEY }); break;
 
       case 'expenses-day-today': setState({ expensesSelectedDate: TODAY_STR }); break;
       case 'expenses-list-toggle': setState(s => ({ expensesListOpen: !s.expensesListOpen })); break;
@@ -7953,18 +8011,18 @@
       case 'expenses-day-cal-prev': setState(s => {
         let m = s.expensesDayCalMonth - 1, y = s.expensesDayCalYear; if (m < 0) { m = 11; y--; }
         const mk = `${y}-${String(m + 1).padStart(2, '0')}`;
-        return { expensesDayCalMonth: m, expensesDayCalYear: y, expensesMonthKey: mk, expensesReportSelectedMonth: mk };
+        return { expensesDayCalMonth: m, expensesDayCalYear: y, expensesMonthKey: mk, expensesReportSelectedMonth: mk, expensesSelectedDate: expDayForMonth(s, mk) };
       }); break;
       case 'expenses-day-cal-next': setState(s => {
         let m = s.expensesDayCalMonth + 1, y = s.expensesDayCalYear; if (m > 11) { m = 0; y++; }
         const mk = `${y}-${String(m + 1).padStart(2, '0')}`;
-        return { expensesDayCalMonth: m, expensesDayCalYear: y, expensesMonthKey: mk, expensesReportSelectedMonth: mk };
+        return { expensesDayCalMonth: m, expensesDayCalYear: y, expensesMonthKey: mk, expensesReportSelectedMonth: mk, expensesSelectedDate: expDayForMonth(s, mk) };
       }); break;
       case 'expenses-report-year-prev': setState(s => ({ expensesReportYear: (s.expensesReportYear || TODAY.getFullYear()) - 1 })); break;
       case 'expenses-report-year-next': setState(s => ({ expensesReportYear: (s.expensesReportYear || TODAY.getFullYear()) + 1 })); break;
       case 'expenses-report-month-pick': {
         const [y, m] = el.dataset.month.split('-').map(Number);
-        setState({ expensesMonthKey: el.dataset.month, expensesReportSelectedMonth: el.dataset.month, expensesDayCalYear: y, expensesDayCalMonth: m - 1 });
+        setState(s => ({ expensesMonthKey: el.dataset.month, expensesReportSelectedMonth: el.dataset.month, expensesDayCalYear: y, expensesDayCalMonth: m - 1, expensesSelectedDate: expDayForMonth(s, el.dataset.month) }));
         break;
       }
       case 'expenses-report-export': {
@@ -8288,10 +8346,7 @@
       case 'clients-filter': setState({ clientsFilter: el.dataset.key }); break;
       case 'client-quote': {
         const c = state.clients.find(x => x.id === id); if (!c) break;
-        const contact = [c.phone, c.email].filter(Boolean).join(' · ');
-        const sh = state.shoots.find(x => (x.client || '').trim().toLowerCase() === c.name.trim().toLowerCase());
-        const tier = sh && sh.packageTier && sh.packageTier !== 'custom' ? sh.packageTier : '';
-        setState(s => ({ view: 'docs', docType: 'quotation', editingDocId: null, docsHistoryOpen: false, docDraft: { ...s.docDraft, clientName: c.name, clientContact: contact, packageKey: tier, description: s.docDraft.description || (sh ? (projectTypeLabel(sh) || shootTypeLabel(sh.shootType)) : ''), amount: sh ? String(sh.package || '') : s.docDraft.amount, dueDate: addDays(TODAY_STR, 30) } }));
+        setState(s => ({ view: 'docs', docType: 'quotation', editingDocId: null, docsHistoryOpen: false, docClientId: c.id, docDraft: { ...docDraftForClient(s, c, 'quotation'), dueDate: addDays(TODAY_STR, 30) } }));
         try { localStorage.setItem('shoottracker_last_view', 'docs'); } catch (e2) { /* ignore */ }
         break;
       }
@@ -8315,6 +8370,13 @@
 
       case 'doc-type': setState(s => {
         const doctype = el.dataset.doctype;
+        const pc = s.docClientId && s.clients.find(c => c.id === s.docClientId);
+        if (pc && String(s.docDraft.clientName || '').trim() === pc.name) {
+          const dd = docDraftForClient(s, pc, doctype);
+          if (doctype === 'quotation') dd.dueDate = addDays(dd.date || TODAY_STR, 30);
+          if (doctype === 'invoice') dd.billingKind = dd.billingKind || 'soa';
+          return { docType: doctype, docDraft: dd };
+        }
         if (doctype === 'invoice') {
           const kind = s.docDraft.billingKind || 'soa';
           return { docType: doctype, docDraft: { ...s.docDraft, billingKind: kind, invoiceNumber: nextInvoiceNumber(s, kind) } };
@@ -8411,11 +8473,11 @@
       case 'insights-chart-month-select': setState({ insightsChartSelectedMonth: el.dataset.month }); break;
 
       case 'modal-close':
-        if (el.dataset.which === 'shoot') { setState({ shootConfirmCloseOpen: true }); break; }
+        if (el.dataset.which === 'shoot') { askCloseShoot(); break; }
         closeModalOf(el.dataset.which);
         break;
       case 'modal-backdrop-close':
-        if (el.dataset.which === 'shoot') { setState({ shootConfirmCloseOpen: true }); break; }
+        if (el.dataset.which === 'shoot') { askCloseShoot(); break; }
         // For data-entry modals, ignore clicks on the backdrop (outside the box) so an
         // accidental click doesn't discard whatever is being typed. Close with the ✕ button.
         if (['gear', 'loan', 'loanpayment', 'shootpayment', 'goal', 'goalfund', 'client', 'telegram', 'remind'].includes(el.dataset.which)) break;
@@ -8723,8 +8785,11 @@
     font('bold', 16.5, NIGHT_TEXT);
     doc.text(truncate(bizName(), leftMaxW), LX + LS + 12, LY + 18);
     font('normal', 8.5, NIGHT_MUT);
-    const contact = [S().tagline, S().contactLine].map(tt => String(tt || '').trim()).filter(Boolean).join(' · ');
-    if (contact) doc.text(truncate(contact, leftMaxW), LX + LS + 12, LY + 31);
+    const contactParts = [S().tagline, S().contactLine].map(tt => String(tt || '').trim()).filter(Boolean);
+    const contact = contactParts.join(' · ');
+    // Too long for one line: put the tagline and the contact line on two lines instead of cutting it off.
+    if (contact && (doc.getTextWidth(contact) <= leftMaxW || contactParts.length < 2)) doc.text(truncate(contact, leftMaxW), LX + LS + 12, LY + 31);
+    else if (contact) contactParts.forEach((ln, i) => doc.text(truncate(ln, leftMaxW), LX + LS + 12, LY + 31 + i * 11));
     font('bold', 25, NIGHT_TEXT);
     doc.text(pdfDocTitle, RX, LY + 21, { align: 'right' });
     if (docType === 'quotation') {
@@ -8882,7 +8947,7 @@
       // ---- summary box ----
       const colW = (CW - 28) / 4;
       font('bold', 10.5);
-      const cells = [[td('pdf.client'), sanitizePeso(d.clientName) || td('tpl.client_ph')], [td('pdf.event'), sanitizePeso(d.description) || td('prev.professional')], [td('ft.date'), fmtDateShortYear(d.date)], [td('pk.total'), null]];
+      const cells = [[td('pdf.client'), sanitizePeso(d.clientName) || td('tpl.client_ph')], [td('pdf.event'), sanitizePeso(d.description) || td('prev.professional')], [td('ft.date'), fmtDateShortYear(d.eventDate || d.date)], [td('pk.total'), null]];
       const cellLines = cells.map(c => c[1] == null ? [''] : doc.splitTextToSize(c[1], colW - 10).slice(0, 2));
       const sh = 30 + Math.max(...cellLines.map(l => l.length)) * 13 + 10;
       doc.setFillColor(...GROUND); doc.roundedRect(M, y, CW, sh, 10, 10, 'F');
@@ -8895,7 +8960,7 @@
       y += sh + 22;
       // ---- body ----
       font('normal', 10, INK);
-      const bodyLines = doc.splitTextToSize(sanitizePeso(fillTemplate(docText('tplContract'), d, pdfFmtMoney)), CW);
+      const bodyLines = doc.splitTextToSize(sanitizePeso(fillTemplate(docText('tplContract'), { ...d, date: d.eventDate || d.date }, pdfFmtMoney)), CW);
       bodyLines.forEach(line => { ensureSpace(15); doc.text(line, M, y); y += 15; });
       y += 12;
       let secN = 1;
@@ -9311,9 +9376,7 @@
         if (id) {
           const c = state.clients.find(cl => cl.id === id);
           if (c) {
-            const contact = [c.phone, c.email].filter(Boolean).join(' · ');
-            state = setPath(state, 'docDraft.clientName', c.name);
-            state = setPath(state, 'docDraft.clientContact', contact);
+            state = { ...state, docClientId: c.id, docDraft: docDraftForClient(state, c, state.docType) };
             render();
           }
         }
@@ -9345,7 +9408,7 @@
         setState({ shootDatePickerOpen: false, timePickerOpen: false, shootDeadlinePickerOpen: false, docDatePickerOpen: false, docDuePickerOpen: false, ftDraftDatePickerOpen: false, loanStartPickerOpen: false, dpKey: null });
       } else if (state.modal) {
         e.preventDefault(); e.stopPropagation();
-        setState({ shootConfirmCloseOpen: true });
+        askCloseShoot();
       } else if (state.remindModal || state.payPickOpen || state.loanModal || state.loanPaymentModal || state.shootPaymentModal || state.goalModal || state.goalFundModal || state.clientModal || state.telegramModalOpen || state.chipModal) {
         e.preventDefault(); e.stopPropagation();
         closeModalOf(state.remindModal ? 'remind' : state.payPickOpen ? 'paypick' : state.loanModal ? 'loan' : state.loanPaymentModal ? 'loanpayment' : state.shootPaymentModal ? 'shootpayment' : state.goalModal ? 'goal' : state.goalFundModal ? 'goalfund' : state.clientModal ? 'client' : state.telegramModalOpen ? 'telegram' : 'chip');
@@ -9360,7 +9423,6 @@
       if (!form) return;
       e.preventDefault();
       const action = form.dataset.action;
-      if (action === 'activate-license') { activateLicense((document.getElementById('lic-key') || {}).value); return; }
       const gv = (id) => (document.getElementById(id) || {}).value || '';
       if (action === 'auth-login') { authLogin(gv('auth-email'), gv('auth-pass')); return; }
       if (action === 'auth-signup') { authSignup(gv('auth-key'), gv('auth-email'), gv('auth-pass')); return; }
@@ -9536,6 +9598,11 @@
       } else if (action === 'save-client') {
         const d = state.clientDraft;
         if (!(d.name || '').trim()) { alert(t('cm.err_name')); return; }
+        if (state.clientModal.mode === 'add') {
+          const nm = d.name.trim().toLowerCase();
+          const dup = state.clients.find(c => String(c.name || '').trim().toLowerCase() === nm);
+          if (dup && !confirm(t('cm.dup_confirm', { name: dup.name }))) return;
+        }
         setState(s => s.clientModal.mode === 'add'
           ? { clients: [...s.clients, { ...d, id: 'c' + Date.now() }], clientModal: null, clientDraft: null }
           : (() => {
@@ -9651,7 +9718,7 @@
     } catch (e) { /* storage unavailable */ }
 
     render();
-    refreshUsdRate(); // fire-and-forget: fetch live USD→PHP for the Foreign estimate
+    // The USD rate is fetched only when a Foreign (USD) shoot is used, not on every launch.
   }
 
   // Fetches the current mid-market USD→PHP rate (keyless, free) once every ~12h and caches it
@@ -9660,7 +9727,7 @@
   // rate, then to USD_TO_PHP, so nothing breaks without a network.
   async function refreshUsdRate() {
     try {
-      const ts = Number(lsGet('pol_usd_rate_ts') || 0);
+      const ts = Number(lsGet('eksakto_usd_rate_ts') || 0);
       if (state.usdRate > 0 && (Date.now() - ts) < 12 * 3600 * 1000) return; // still fresh
     } catch (e) { /* ignore */ }
     const sources = [
@@ -9675,9 +9742,9 @@
         if (rate && rate > 0) {
           const d = date || new Date().toISOString().slice(0, 10);
           try {
-            localStorage.setItem('pol_usd_rate', String(rate));
-            localStorage.setItem('pol_usd_rate_date', d);
-            localStorage.setItem('pol_usd_rate_ts', String(Date.now()));
+            localStorage.setItem('eksakto_usd_rate', String(rate));
+            localStorage.setItem('eksakto_usd_rate_date', d);
+            localStorage.setItem('eksakto_usd_rate_ts', String(Date.now()));
           } catch (e) { /* storage full/unavailable */ }
           setState({ usdRate: rate, usdRateDate: d });
           return;
