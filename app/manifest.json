@@ -1,7 +1,7 @@
 {
   "name": "Eksakto",
   "short_name": "Eksakto",
-  "description": "Ang tracker para sa Pinoy creatives: shoots, clients, singilan, kita at gastos.",
+  "description": "Ang tracker para sa Pinoy creatives: shoots, clients, bayad, kita at gastos.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
