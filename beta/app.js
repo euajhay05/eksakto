@@ -58,6 +58,9 @@
     "chk.backup": "Mag backup sa Google Drive",
     "chk.sample_note": "Sample data ang nakikita ngayon.",
     "chk.sample_clear": "Burahin ang sample data",
+    "chk.done_title": "All set na!",
+    "chk.done_body": "Tapos na ang setup. Ready nang gamitin ang Eksakto para sa bawat shoot, bayad at gastos.",
+    "chk.done_btn": "Simulan na",
     "chip.this_month": "Shoots at edits ngayong buwan",
     "chip.in_month": "Shoots at edits nung {month}",
     "chip.completed": "Mga natapos na shoot",
@@ -1286,6 +1289,9 @@
     "chk.backup": "Back up to Google Drive",
     "chk.sample_note": "This is sample data.",
     "chk.sample_clear": "Delete sample data",
+    "chk.done_title": "All set!",
+    "chk.done_body": "Setup is complete. Eksakto is ready for every shoot, payment and expense.",
+    "chk.done_btn": "Let's go",
     "chip.this_month": "Shoots and edits this month",
     "chip.in_month": "Shoots and edits in {month}",
     "chip.completed": "Completed shoots",
@@ -5727,14 +5733,32 @@
   function homeChecklist() {
     if (S().checklistHidden) return '';
     const real = state.shoots.filter(x => !x.sample);
+    // A step stays checked once it was completed, so editing or deleting a shoot,
+    // payment or document later never brings a finished step back.
+    const sticky = S().checklistDone || {};
     const items = [
-      { done: real.length > 0, label: t('chk.first_shoot'), action: 'shoot-add-open' },
-      { done: real.some(x => (Number(x.paid) || 0) > 0), label: t('chk.log_payment'), action: 'dock', key: 'payments' },
+      { id: 'shoot', done: !!sticky.shoot || real.length > 0, label: t('chk.first_shoot'), action: 'shoot-add-open' },
+      { id: 'payment', done: !!sticky.payment || real.some(x => shootPaidTotal(x) > 0), label: t('chk.log_payment'), action: 'dock', key: 'payments' },
     ];
-    if (feat('docs')) items.push({ done: (state.documents || []).length > 0, label: t('chk.make_doc'), action: 'dock', key: 'docs' });
-    items.push({ done: !!lsGet('shoottracker_last_backup'), label: t('chk.backup'), action: 'backup-drive' });
+    if (feat('docs')) items.push({ id: 'doc', done: !!sticky.doc || (state.documents || []).length > 0, label: t('chk.make_doc'), action: 'dock', key: 'docs' });
+    items.push({ id: 'backup', done: !!sticky.backup || !!lsGet('shoottracker_last_backup'), label: t('chk.backup'), action: 'backup-drive' });
     const doneCount = items.filter(i => i.done).length;
-    if (doneCount === items.length && !hasSampleData()) return '';
+    const allDone = doneCount === items.length && !hasSampleData();
+    const newlyDone = items.filter(i => i.done && !sticky[i.id]);
+    if (newlyDone.length) {
+      const nextDone = { ...sticky };
+      newlyDone.forEach(i => { nextDone[i.id] = true; });
+      // Persist after this render pass so finished steps never come back.
+      setTimeout(() => setSettings({ checklistDone: nextDone }), 0);
+    }
+    // Everything done: show a one time "all set" card. Tapping the button hides it for good.
+    if (allDone) return `
+    <section class="chk chk-alldone">
+      <div class="chk-head"><div><h2>${t('chk.done_title')}</h2><small>${t('chk.progress', { done: items.length, total: items.length })}</small></div></div>
+      <div class="chk-bar"><i style="width:100%"></i></div>
+      <p class="chk-done-p">${t('chk.done_body')}</p>
+      <button type="button" class="btn-primary chk-done-btn" data-action="checklist-hide">${t('chk.done_btn')}</button>
+    </section>`;
     return `
     <section class="chk">
       <div class="chk-head"><div><h2>${t('chk.title')}</h2><small>${t('chk.progress', { done: doneCount, total: items.length })}</small></div><button type="button" class="btn-link" data-action="checklist-hide">${t('chk.hide')}</button></div>
