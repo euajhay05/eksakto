@@ -194,6 +194,10 @@
     "pay.full_amount": "buong amount",
     "pay.remind_btn": "I remind",
     "pay.log_btn": "I log",
+    "pay.soa_btn": "SOA",
+    "pay.inv_btn": "Invoice",
+    "pf.make_soa": "Gumawa ng SOA",
+    "pf.make_invoice": "Gumawa ng invoice",
     "pay.empty_month": "Walang shoot o bayad sa {month}.",
     "pay.empty_late": "Walang overdue. Ayos!",
     "pay.empty_bal": "Wala nang may balance ngayong buwan.",
@@ -930,6 +934,13 @@
     "sm.reel_ph": "hal. Reel #{n}",
     "sm.no_projects": "Wala pang project. Mag add sa baba. Ito ang magiging items sa invoice.",
     "sm.add_project": "＋ Dagdag na project",
+    "sm.item_amount": "Presyo",
+    "sm.items_total": "Total: {amount}",
+    "sm.items_total_used": "Ito na ang presyo ng project.",
+    "sm.items_total_manual": "Iba ang presyong nilagay ({amount}).",
+    "sm.items_use_total": "Gamitin ang total",
+    "bill.other_charges": "Dagdag na bayad",
+    "bill.less_discount": "Bawas (diskwento)",
     "sm.location": "Location (optional)",
     "sm.location_ph": "hal. Tagaytay",
     "sm.add_location": "+ Dagdag na location",
@@ -1424,6 +1435,10 @@
     "pay.full_amount": "full amount",
     "pay.remind_btn": "Remind",
     "pay.log_btn": "Log",
+    "pay.soa_btn": "SOA",
+    "pay.inv_btn": "Invoice",
+    "pf.make_soa": "Create SOA",
+    "pf.make_invoice": "Create invoice",
     "pay.empty_month": "No shoots or payments in {month}.",
     "pay.empty_late": "Nothing overdue. Nice!",
     "pay.empty_bal": "No balances left this month.",
@@ -2160,6 +2175,13 @@
     "sm.reel_ph": "e.g. Reel #{n}",
     "sm.no_projects": "No projects yet; add one below. These become the invoice line items.",
     "sm.add_project": "＋ Add project",
+    "sm.item_amount": "Amount",
+    "sm.items_total": "Total: {amount}",
+    "sm.items_total_used": "Used as the project price.",
+    "sm.items_total_manual": "A different price was set ({amount}).",
+    "sm.items_use_total": "Use the total",
+    "bill.other_charges": "Other charges",
+    "bill.less_discount": "Less discount",
     "sm.location": "Location (optional)",
     "sm.location_ph": "e.g. Tagaytay",
     "sm.add_location": "+ Add location",
@@ -3302,6 +3324,7 @@
           status: normalizeShootStatus(sh.status),
           scriptStatus: normalizeScriptStatus(sh.scriptStatus),
           shootType: normalizeShootType(sh.shootType),
+          ...(Array.isArray(sh.projectItems) ? { projectItems: sh.projectItems.map(normDeliverable) } : {}),
         }));
       } else if (k === 'goals') {
         val = val.map(g => ({ currency: 'PHP', ...g }));
@@ -3657,7 +3680,7 @@
       .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '99:99').localeCompare(b.time || '99:99')).slice(0, 5);
     const nextUpList = upcomingList.slice(0, 4).map(s => ({
       ...s,
-      dayNum: s.date ? String(new Date(s.date + 'T00:00:00').getDate()) : '–',
+      dayNum: s.date ? String(new Date(s.date + 'T00:00:00').getDate()) : '?',
     }));
     const noNextUp = nextUpList.length === 0;
 
@@ -3999,7 +4022,7 @@
     const nowForWeek = new Date();
     const weekStart = new Date(nowForWeek); weekStart.setDate(nowForWeek.getDate() - nowForWeek.getDay()); weekStart.setHours(0, 0, 0, 0);
     const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
-    const weekRangeLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    const weekRangeLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} to ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
     // Build day keys from LOCAL calendar parts (not toISOString, which shifts a
     // day in positive-UTC zones like PH) so bars line up with the stored dates.
     const todayISO = TODAY_STR;
@@ -4662,7 +4685,7 @@
           </button>
           <div class="pay-side">
             <span class="num"><span class="pay-bal ${bal > 0 ? '' : 'paid'}">${bal > 0 ? fmtMoney(bal) : t('card.paid')}</span><small>${bal > 0 ? (info.paid > 0 ? (t('pay.of_total', { total: fmtMoney(info.total) })) : t('pay.full_amount')) : fmtMoney(info.total)}</small></span>
-            ${bal > 0 ? `<span class="pay-btns">${canRemind ? `<button type="button" class="${info.overdue ? 'btn-dark' : 'btn-out'} pay-btn" data-action="remind-open" data-id="${esc(s.id)}">${t('pay.remind_btn')}</button>` : ''}<button type="button" class="${info.overdue ? 'btn-out' : 'btn-dark'} pay-btn" data-action="shoot-payment-open" data-id="${esc(s.id)}">${t('pay.log_btn')}</button></span>` : ''}
+            ${bal > 0 ? `<span class="pay-btns">${canRemind ? `<button type="button" class="${info.overdue ? 'btn-dark' : 'btn-out'} pay-btn" data-action="remind-open" data-id="${esc(s.id)}">${t('pay.remind_btn')}</button>` : ''}<button type="button" class="${info.overdue ? 'btn-out' : 'btn-dark'} pay-btn" data-action="shoot-payment-open" data-id="${esc(s.id)}">${t('pay.log_btn')}</button>${feat('docs') ? `<button type="button" class="btn-out pay-btn" data-action="soa-for" data-id="${esc(s.id)}" title="${esc(isForeignShoot(s) ? t('pf.make_invoice') : t('pf.make_soa'))}">${isForeignShoot(s) ? t('pay.inv_btn') : t('pay.soa_btn')}</button>` : ''}</span>` : ''}
           </div>
         </div>`;
       }).join('');
@@ -5332,6 +5355,7 @@
             <div style="font-size:9.5px;font-weight:700;color:oklch(0.4 0.13 150);text-transform:uppercase;margin-bottom:6px">${docType === 'contract' ? td('pdf.client') : td('prev.billed_to')}</div>
             <div style="font-weight:700;font-size:13.5px;margin-bottom:2px">${esc(d.clientName) || t('tpl.client_ph')}</div>
             <div style="font-size:11.5px;color:oklch(0.5 0.015 150)">${esc(d.clientContact) || td('prev.no_contact')}</div>
+            ${isInvoice && String(d.description || '').trim() ? `<div style="font-size:9.5px;font-weight:700;color:oklch(0.4 0.13 150);text-transform:uppercase;margin:10px 0 4px">${td('pdf.project')}</div><div style="font-weight:700;font-size:12.5px">${esc(d.description)}</div>` : ''}
           </div>
         </div>
         ${isInvoice ? `
@@ -6437,11 +6461,13 @@
           ${projectTypes().length ? `<div class="field"><label>${t('sm.ptype')}</label><select data-bind="draft.projectType"><option value="">${t('common.pick')}</option>${projectTypes().concat(d.projectType && !projectTypes().includes(d.projectType) ? [d.projectType] : []).map(tt => `<option value="${esc(tt)}" ${d.projectType === tt ? 'selected' : ''}>${esc(dl(tt))}</option>`).join('')}</select></div>${isOthersType(d.projectType) ? `<div class="field"><label>${t('sm.specify_label')} <span style="font-weight:500;opacity:.6">${t('common.optional')}</span></label><input type="text" value="${esc(d.projectTypeOther || '')}" data-bind="draft.projectTypeOther" placeholder="${esc(t('sm.specify_ph'))}" maxlength="60"/></div><div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin:-4px 0 4px 2px;line-height:1.45">${t('sm.specify_hint')}</div>` : ''}` : ''}
           ${isEditOnly ? `
           <div class="field"><label>${t('sm.deliverables')}</label>
-            ${projectItems.length ? projectItems.map((p, i) => `
+            ${projectItems.length ? projectItems.map(normDeliverable).map((p, i) => `
             <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
-              <input type="text" value="${esc(p)}" data-proj-idx="${i}" placeholder="${esc(t('sm.reel_ph', { n: i + 1 }))}" style="flex:1"/>
+              <input type="text" value="${esc(p.name)}" data-proj-idx="${i}" data-proj-field="name" placeholder="${esc(t('sm.reel_ph', { n: i + 1 }))}" style="flex:1;min-width:0"/>
+              <div class="${isForeign ? '' : 'money-in'}" style="flex:none;width:120px"><input type="text" inputmode="decimal" value="${esc(formatMoneyLiveDisplay(p.amount))}" data-proj-idx="${i}" data-proj-field="amount" placeholder="${isForeign ? '$0' : '0'}" aria-label="${esc(t('sm.item_amount'))}" style="width:100%;box-sizing:border-box"/></div>
               <button type="button" data-action="shoot-project-remove" data-idx="${i}" style="all:unset;cursor:pointer;flex:none;width:34px;height:34px;border-radius:8px;background:oklch(0.95 0.02 25);color:oklch(0.5 0.18 25);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">✕</button>
             </div>`).join('') : `<div style="font-size:12px;color:oklch(0.5 0.015 150);margin-bottom:8px">${t('sm.no_projects')}</div>`}
+            <div data-proj-total style="font-size:12px;color:oklch(0.45 0.015 150);margin:-2px 0 8px 2px;line-height:1.45">${deliverablesTotalHtml(d, isForeign)}</div>
             <button type="button" data-action="shoot-project-add" style="all:unset;cursor:pointer;display:block;text-align:center;box-sizing:border-box;width:100%;padding:9px;border-radius:9px;border:1.5px dashed oklch(0.5 0.13 150);background:oklch(0.97 0.02 150);color:oklch(0.4 0.13 150);font-size:12.5px;font-weight:700">${t('sm.add_project')}</button>
           </div>` : (showLoc ? `<div class="field"><label>${t('sm.location_label')} <span style="font-weight:600;color:var(--mut)">${t('common.optional')}</span></label><input type="text" value="${esc(d.location)}" data-bind="draft.location" placeholder="${esc(t('sm.location_ph'))}"/></div>` : `<div class="field" style="margin-bottom:4px"><span data-action="shoot-loc-toggle" style="cursor:pointer;font-size:12.5px;font-weight:600;color:oklch(0.45 0.14 150);text-decoration:underline">${t('sm.add_location')}</span></div>`)}
           ${isEditOnly ? `<div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin-bottom:2px">${t('sm.edit_only_date', { date: `<b style="color:oklch(0.32 0.02 150)">${shootDateDisplayLabel}</b>` })}</div>` : ''}
@@ -6579,7 +6605,8 @@
           <label class="pf-it"><span>${t('pf.notes')}</span><input type="text" value="${esc(d.notes)}" data-bind="draft.notes" placeholder="${esc(t('pf.add'))}"/></label>
         </div>
         ${v.isEditOnly ? `<div class="pf-card pf-extra"><div class="pf-lbl">${t('sm.deliverables')}</div>
-          ${v.projectItems.length ? v.projectItems.map((p, i) => `<div class="pf-deliv"><input type="text" value="${esc(p)}" data-proj-idx="${i}" placeholder="${esc(t('sm.reel_ph', { n: i + 1 }))}"/><button type="button" data-action="shoot-project-remove" data-idx="${i}" aria-label="${esc(t('common.remove'))}">✕</button></div>`).join('') : `<div class="pf-hint pf-left">${t('sm.no_projects')}</div>`}
+          ${v.projectItems.length ? v.projectItems.map(normDeliverable).map((p, i) => `<div class="pf-deliv"><input type="text" value="${esc(p.name)}" data-proj-idx="${i}" data-proj-field="name" placeholder="${esc(t('sm.reel_ph', { n: i + 1 }))}"/><input type="text" inputmode="decimal" value="${esc(formatMoneyLiveDisplay(p.amount))}" data-proj-idx="${i}" data-proj-field="amount" placeholder="${v.isForeign ? '$0' : '₱0'}" aria-label="${esc(t('sm.item_amount'))}" style="flex:0 0 96px;text-align:right"/><button type="button" data-action="shoot-project-remove" data-idx="${i}" aria-label="${esc(t('common.remove'))}">✕</button></div>`).join('') : `<div class="pf-hint pf-left">${t('sm.no_projects')}</div>`}
+          <div class="pf-hint pf-left" data-proj-total>${deliverablesTotalHtml(d, v.isForeign)}</div>
           <button type="button" class="pf-dashed" data-action="shoot-project-add">${t('sm.add_project')}</button></div>` : ''}
         ${v.paidDateBlock ? `<div class="pf-card pf-extra">${v.paidDateBlock}</div>` : ''}
         ${v.paidQuickBlock || v.foreignBlock ? `<div class="pf-extra pf-plain">${v.paidQuickBlock}${v.foreignBlock}</div>` : ''}
@@ -6599,11 +6626,13 @@
     </div>`;
   }
   // Bottom sheet shown after saving from a phone form.
+  // Billing document wording for a shoot: Invoice for a Foreign (USD) custom project, SOA otherwise.
+  function isForeignShoot(sh) { return !!sh && sh.shootType !== 'Real Estate' && sh.currency === 'USD'; }
   function modalSavedSheet() {
     const sv = state.savedSheet;
     if (!sv) return '';
     const dateLong = sv.date ? new Date(sv.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
-    let title = '', sub = '', rows = [], primary = '';
+    let title = '', sub = '', rows = [], primary = '', extraBtn = '';
     if (sv.kind === 'shoot') {
       const tierMeta = sv.tier && sv.tier !== 'custom' ? getLiveTiers().find(tt => tt.value === sv.tier) : null;
       const pkgName = tierMeta ? tierMeta.label.replace(/\s*\(₱[^)]*\)\s*$/, '') : (sv.tier === 'custom' ? t('tier.custom') : t('type.custom'));
@@ -6612,11 +6641,14 @@
       sub = [sv.client, dateLong].filter(Boolean).join(' · ');
       rows = [[t('type.package'), esc(pkgName), ''], [t('pk.total'), fmtMoney(sv.total), ''], [t('cl.paid'), fmtMoney(sv.paid), ''], [t('ms.balance_label'), fmtMoney(bal), bal > 0 ? 'warn' : '']];
       primary = feat('docs') ? `<button type="button" class="pf-btn dark" data-action="saved-quote">${t('hq.make_quotation')}</button>` : '';
+      const shS = sv.id ? state.shoots.find(x => x.id === sv.id) : null;
+      if (feat('docs') && shS) extraBtn = `<div class="pf-ok-btns one" style="margin-bottom:10px"><button type="button" class="pf-btn" data-action="saved-soa" data-id="${esc(sv.id)}">${isForeignShoot(shS) ? t('pf.make_invoice') : t('pf.make_soa')}</button></div>`;
     } else if (sv.kind === 'payment') {
       title = t('pf.saved_payment');
       sub = [sv.client, dateLong].filter(Boolean).join(' · ');
       rows = [[t('pf.amount'), fmtMoney(sv.amount), ''], [t('pk.total'), fmtMoney(sv.total), ''], [t('cl.paid'), fmtMoney(sv.paid), ''], [t('ms.balance_label'), fmtMoney(Math.max(sv.total - sv.paid, 0)), sv.total - sv.paid > 0 ? 'warn' : '']];
-      primary = feat('docs') && sv.id ? `<button type="button" class="pf-btn dark" data-action="saved-soa" data-id="${esc(sv.id)}">${t('hq.send_soa')}</button>` : '';
+      const shP = sv.id ? state.shoots.find(x => x.id === sv.id) : null;
+      primary = feat('docs') && sv.id ? `<button type="button" class="pf-btn dark" data-action="saved-soa" data-id="${esc(sv.id)}">${isForeignShoot(shP) ? t('pf.make_invoice') : t('pf.make_soa')}</button>` : '';
     } else if (sv.kind === 'expense') {
       title = t('pf.saved_expense');
       sub = [sv.description, dateLong].filter(Boolean).join(' · ');
@@ -6631,6 +6663,7 @@
       <div class="pf-ok-title">${title}</div>
       <div class="pf-ok-sub">${esc(sub)}</div>
       <div class="pf-ok-list">${rows.map(([l, val, cls]) => `<div><span>${l}</span><b class="${cls}">${val}</b></div>`).join('')}</div>
+      ${extraBtn}
       <div class="pf-ok-btns${primary ? '' : ' one'}"><button type="button" class="pf-btn" data-action="saved-close">${t('pf.done')}</button>${primary}</div>
     </div>`;
   }
@@ -7063,6 +7096,69 @@
     </div>`;
   }
 
+  // ---- deliverables (Edit only / custom projects): rows of { name, amount } ----
+  // Older versions stored plain strings and people typed the price inside, like "Rene - 75".
+  // A string is split only when it clearly ends with a price; anything unclear stays as the name.
+  const DELIV_COUNTER_WORDS = /^(ep|episode|part|pt|reel|reels|vlog|video|videos|day|week|no|number|set|batch|round|take|version|v|chapter|scene|clip|clips|photo|photos|page|pages|shot|shots|#)$/i;
+  function parseDeliverableText(str) {
+    const raw = String(str == null ? '' : str);
+    const t0 = raw.trim();
+    if (!t0) return { name: '', amount: '' };
+    // "Name - 75", "Name: 75", "Name – ₱1,500", "Name - P75"
+    let m = /^(.*?\S)\s*[-\u2013\u2014:]\s*(?:PHP\s*|\u20b1\s*|P(?=\d))?(\d[\d,]*(?:\.\d+)?)\s*$/i.exec(t0);
+    if (m && /[A-Za-z\u00C0-\u024F]/.test(m[1])) return { name: m[1].trim(), amount: m[2].replace(/,/g, ''), text: raw };
+    // "Name 75" (space only): only when it reads like a price, not "Episode 2" or "Year End 2025"
+    m = /^(.*?[^\d\s#])\s+(PHP\s*|\u20b1\s*)?(\d[\d,]*(?:\.\d+)?)$/i.exec(t0);
+    if (m && /[A-Za-z\u00C0-\u024F]/.test(m[1])) {
+      const last = m[1].trim().split(/\s+/).pop();
+      const num = m[3].replace(/,/g, '');
+      const looksYear = /^(19|20)\d\d$/.test(num);
+      if (!DELIV_COUNTER_WORDS.test(last) && !looksYear && (m[2] || num.replace(/\..*$/, '').length >= 2)) return { name: m[1].trim(), amount: num, text: raw };
+    }
+    return { name: t0, amount: '' };
+  }
+  function normDeliverable(x) {
+    if (x && typeof x === 'object') {
+      const a = x.amount == null ? '' : sanitizeMoneyInput(String(x.amount));
+      return { name: String(x.name == null ? '' : x.name), amount: a, ...(x.text ? { text: x.text } : {}) };
+    }
+    return parseDeliverableText(x);
+  }
+  function deliverablesOf(sh) { return (Array.isArray(sh && sh.projectItems) ? sh.projectItems : []).map(normDeliverable); }
+  function deliverablesTotal(items) { return items.reduce((a, it) => a + (it.amount !== '' ? (Number(it.amount) || 0) : 0), 0); }
+  function deliverablesHaveAmounts(items) { return items.some(it => it.amount !== '' && (Number(it.amount) || 0) > 0); }
+  // Running total under the list, and whether it is the project price or a different price was typed.
+  function deliverablesTotalHtml(d, isForeign) {
+    const items = deliverablesOf(d);
+    if (!deliverablesHaveAmounts(items)) return '';
+    const fmt = n => isForeign ? '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }) : fmtMoney(n);
+    const total = deliverablesTotal(items);
+    const price = Number(isForeign ? d.usdCharged : d.package) || 0;
+    const same = Math.abs(price - total) < 0.005;
+    return `<b>${t('sm.items_total', { amount: fmt(total) })}</b> · ${same ? t('sm.items_total_used') : `${t('sm.items_total_manual', { amount: fmt(price) })} <button type="button" data-action="shoot-project-use-total" style="all:unset;cursor:pointer;font-weight:700;color:oklch(0.42 0.13 150);text-decoration:underline">${t('sm.items_use_total')}</button>`}`;
+  }
+  // Keep the price in step with the deliverables while it is "automatic". It becomes automatic when it
+  // was empty or equal to the deliverables total; typing a price by hand turns that off (priceFromItems false).
+  function syncPriceFromDeliverables(draft, prevItems, nextItems) {
+    const isForeign = draft.shootType !== 'Real Estate' && draft.currency === 'USD';
+    const key = isForeign ? 'usdCharged' : 'package';
+    const cur = Number(draft[key]) || 0;
+    const prevTotal = deliverablesTotal(prevItems);
+    const auto = draft.priceFromItems === true || (draft.priceFromItems !== false && (cur === 0 || Math.abs(cur - prevTotal) < 0.005));
+    if (!auto || !deliverablesHaveAmounts(nextItems)) return draft;
+    return { ...draft, [key]: String(deliverablesTotal(nextItems)), priceFromItems: true };
+  }
+  function deliverableLines(items, pkg, isForeign) {
+    const fmt = n => isForeign ? '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }) : fmtMoney(n);
+    const named = items.filter(it => String(it.name || '').trim() || it.amount !== '');
+    const lines = named.map(it => { const nm = String(it.name || '').trim() || t('common.untitled'); return it.amount !== '' ? `${nm}: ${fmt(it.amount)}` : nm; });
+    const total = deliverablesTotal(named);
+    if (pkg > 0 && named.every(it => it.amount !== '') && Math.abs(pkg - total) >= 0.005) {
+      lines.push(pkg > total ? `${t('bill.other_charges')}: ${fmt(pkg - total)}` : `${t('bill.less_discount')} ${fmt(total - pkg)}`);
+    }
+    return lines.join('\n');
+  }
+
   // Billing document fields for a shoot (SOA in pesos, or an Invoice in dollars for a foreign
   // custom project). Shared by "Create SOA from this shoot", Home and the reminder attachment.
   function billingFromShoot(dr) {
@@ -7070,13 +7166,18 @@
     const foreign = !isRealEstate && dr.currency === 'USD';
     const cl = state.clients.find(c => c.name && dr.client && c.name.trim().toLowerCase() === (dr.client || '').trim().toLowerCase());
     const contact = cl ? [cl.phone, cl.email].filter(Boolean).join(' · ') : '';
-    const desc = `${shootTypeLabel(dr.shootType)}${dr.location ? ' at ' + dr.location : ''}`;
+    const pkgName = isRealEstate && dr.packageTier && dr.packageTier !== 'custom' ? String((packageByKey(dr.packageTier) || {}).name || '') : '';
+    // Project line: project type or package name; left empty (not a generic "Custom project") when neither is set.
+    const desc = [projectTypeLabel(dr) || pkgName, dr.location || ''].filter(Boolean).join(' · ');
+    const descOr = desc || shootTypeLabel(dr.shootType);
     const kind = foreign ? 'invoice' : 'soa';
-    const items = (Array.isArray(dr.projectItems) ? dr.projectItems : []).map(x => String(x || '').trim()).filter(Boolean);
+    const delivs = deliverablesOf(dr);
+    const withAmounts = deliverablesHaveAmounts(delivs);
+    const items = delivs.map(it => String(it.text && it.amount === '' ? it.text : it.name || '').trim()).filter(Boolean);
     let extra;
     if (foreign) {
       const usd = Number(dr.usdCharged) || 0;
-      extra = { currency: 'USD', billingKind: 'invoice', amount: String(usd), lineItems: items.length ? items.join('\n') : `${desc} - $${usd.toLocaleString('en-US')}`, packageTotal: '', paidToDate: '', milestoneLabel: '', paymentStatus: 'Unpaid' };
+      extra = { currency: 'USD', billingKind: 'invoice', amount: String(usd), lineItems: withAmounts ? deliverableLines(delivs, usd, true) : (items.length ? items.join('\n') : `${descOr}: $${usd.toLocaleString('en-US')}`), packageTotal: '', paidToDate: '', milestoneLabel: '', paymentStatus: 'Unpaid' };
     } else if (isRealEstate) {
       const dec = decorate(dr);
       const grandTotal = Number(dr.package) || 0, paid = shootPaidTotal(dr);
@@ -7084,14 +7185,14 @@
       const addonsTotal = addonDefs().reduce((sum, ad) => sum + (addons[ad.key] || 0) * ad.price, 0);
       const baseAmt = grandTotal - addonsTotal;
       const baseLabel = (dec.packageTierLabel.split(' - ')[1] || dec.packageTierLabel).split(' (')[0];
-      const addonLines = addonDefs().filter(ad => (addons[ad.key] || 0) > 0).map(ad => `${ad.label}${ad.flat ? '' : ' x' + addons[ad.key]} - ${fmtMoney(ad.price * addons[ad.key])}`);
-      const lineItems = [`${baseLabel} - ${fmtMoney(baseAmt)}`, ...addonLines].join('\n');
+      const addonLines = addonDefs().filter(ad => (addons[ad.key] || 0) > 0).map(ad => `${ad.label}${ad.flat ? '' : ' x' + addons[ad.key]}: ${fmtMoney(ad.price * addons[ad.key])}`);
+      const lineItems = [`${baseLabel}: ${fmtMoney(baseAmt)}`, ...addonLines].join('\n');
       const { next, due } = nextMilestoneDue(grandTotal, paid);
       extra = { currency: 'PHP', billingKind: 'soa', amount: String(due), lineItems, packageTotal: String(grandTotal), paidToDate: String(paid), milestoneLabel: next ? next.label : t('ms.fully_paid'), paymentStatus: due > 0 ? 'Unpaid' : 'Paid', packageKey: (dr.packageTier && dr.packageTier !== 'custom') ? dr.packageTier : '' };
     } else {
       const pkg = Number(dr.package) || 0, paid = shootPaidTotal(dr);
       const remaining = Math.max(pkg - paid, 0);
-      extra = { currency: 'PHP', billingKind: 'soa', amount: String(remaining || pkg), lineItems: items.length ? items.join('\n') : `${desc} - ${fmtMoney(pkg)}`, packageTotal: String(pkg), paidToDate: String(paid), milestoneLabel: '', paymentStatus: remaining > 0 ? 'Unpaid' : 'Paid' };
+      extra = { currency: 'PHP', billingKind: 'soa', amount: String(remaining || pkg), lineItems: withAmounts ? deliverableLines(delivs, pkg, false) : (items.length ? items.join('\n') : `${descOr}: ${fmtMoney(pkg)}`), packageTotal: String(pkg), paidToDate: String(paid), milestoneLabel: '', paymentStatus: remaining > 0 ? 'Unpaid' : 'Paid' };
     }
     return { kind, contact, desc, extra, foreign };
   }
@@ -7114,7 +7215,9 @@
       return { ...base, clientContact: contact || b.contact, description: b.desc, date: TODAY_STR, dueDate: addDays(TODAY_STR, 10), invoiceNumber: nextInvoiceNumber(s, b.kind), ...b.extra };
     }
     const tier = sh.packageTier && sh.packageTier !== 'custom' ? sh.packageTier : '';
-    return { ...base, description: projectTypeLabel(sh) || '', amount: String(Number(sh.package) || 0), packageKey: tier, eventDate: sh.date || '' };
+    const dv = deliverablesOf(sh);
+    const dvLines = sh.shootType !== 'Real Estate' && deliverablesHaveAmounts(dv) ? deliverableLines(dv, Number(sh.package) || 0, false) : '';
+    return { ...base, description: projectTypeLabel(sh) || '', amount: String(Number(sh.package) || 0), packageKey: tier, eventDate: sh.date || '', ...(dvLines ? { lineItems: dvLines } : {}) };
   }
 
   // ---- payment methods (Settings > Paano ka babayaran) ----
@@ -7891,6 +7994,7 @@
         if (!sh) break;
         state = { ...state, draft: { packageTier: 'custom', shootType: 'General Project', serviceType: 'shoot', addons: {}, ...sh } };
         handleAction('shoot-create-billing', el, ev);
+        window.scrollTo(0, 0);
         break;
       }
       case 'shoot-add-open-for-date': openAddShoot(state.selectedDate, true); break;
@@ -7968,8 +8072,9 @@
       }
       case 'shoot-type-pick': setState(s => { const st = el.dataset.type; const draft = { ...s.draft, shootType: st }; if (st === 'General Project' && (draft.status === 'tentative' || draft.status === 'resched')) draft.status = 'idea'; return { draft }; }); break;
       case 'shoot-service-pick': setState(s => ({ draft: { ...s.draft, serviceType: el.dataset.service } })); break;
-      case 'shoot-project-add': setState(s => ({ draft: { ...s.draft, projectItems: [...(Array.isArray(s.draft.projectItems) ? s.draft.projectItems : []), ''] } })); break;
-      case 'shoot-project-remove': setState(s => { const arr = (Array.isArray(s.draft.projectItems) ? s.draft.projectItems : []).slice(); arr.splice(Number(el.dataset.idx), 1); return { draft: { ...s.draft, projectItems: arr } }; }); break;
+      case 'shoot-project-add': setState(s => ({ draft: { ...s.draft, projectItems: [...deliverablesOf(s.draft), { name: '', amount: '' }] } })); break;
+      case 'shoot-project-use-total': setState(s => { const items = deliverablesOf(s.draft); const fx = s.draft.shootType !== 'Real Estate' && s.draft.currency === 'USD'; return { draft: { ...s.draft, [fx ? 'usdCharged' : 'package']: String(deliverablesTotal(items)), priceFromItems: true } }; }); break;
+      case 'shoot-project-remove': setState(s => { const prev = deliverablesOf(s.draft); const arr = prev.slice(); arr.splice(Number(el.dataset.idx), 1); return { draft: syncPriceFromDeliverables({ ...s.draft, projectItems: arr }, prev, arr) }; }); break;
       case 'shoot-currency-pick': setState(s => ({ draft: { ...s.draft, currency: el.dataset.currency } })); if (el.dataset.currency === 'USD') refreshUsdRate(); break;
       case 'shoot-loc-toggle': setState(s => ({ shootLocOpen: true })); break;
       case 'shoot-addons-toggle': setState(s => ({ shootAddonsOpen: !s.shootAddonsOpen })); break;
@@ -8436,6 +8541,12 @@
         const pc = s.docClientId && s.clients.find(c => c.id === s.docClientId);
         if (pc && String(s.docDraft.clientName || '').trim() === pc.name) {
           const dd = docDraftForClient(s, pc, doctype);
+          // Keep a project / notes the user typed; only auto filled text is replaced.
+          const shA = docShootForClient(pc);
+          const autoDescs = shA ? [billingFromShoot(shA).desc, projectTypeLabel(shA) || ''] : [''];
+          const typed = String(s.docDraft.description || '').trim();
+          if (typed && !autoDescs.includes(s.docDraft.description)) dd.description = s.docDraft.description;
+          if (String(s.docDraft.notes || '').trim()) dd.notes = s.docDraft.notes;
           if (doctype === 'quotation') dd.dueDate = addDays(dd.date || TODAY_STR, 30);
           if (doctype === 'invoice') dd.billingKind = dd.billingKind || 'soa';
           return { docType: doctype, docDraft: dd };
@@ -9367,9 +9478,19 @@
       // WITHOUT re-rendering, so the caret doesn't jump mid-typing. State stays in sync for save.
       if (el.dataset.projIdx != null) {
         const idx = Number(el.dataset.projIdx);
-        const arr = (Array.isArray(state.draft && state.draft.projectItems) ? state.draft.projectItems : []).slice();
-        arr[idx] = el.value;
-        state = { ...state, draft: { ...state.draft, projectItems: arr } };
+        const prev = deliverablesOf(state.draft);
+        const arr = prev.slice();
+        const it = { ...(arr[idx] || { name: '', amount: '' }) };
+        delete it.text; // edited by hand: the original pasted text no longer applies
+        if (el.dataset.projField === 'amount') it.amount = sanitizeMoneyInput(el.value); else it.name = el.value;
+        arr[idx] = it;
+        let draft = { ...state.draft, projectItems: arr };
+        if (el.dataset.projField === 'amount') draft = syncPriceFromDeliverables(draft, prev, arr);
+        state = { ...state, draft };
+        // Update the running total and the price field in place (no re-render, so the caret stays put).
+        const isForeignD = draft.shootType !== 'Real Estate' && draft.currency === 'USD';
+        app.querySelectorAll('[data-proj-total]').forEach(n => { n.innerHTML = deliverablesTotalHtml(draft, isForeignD); });
+        app.querySelectorAll(`input[data-bind="draft.${isForeignD ? 'usdCharged' : 'package'}"]`).forEach(n => { if (n !== document.activeElement) n.value = formatMoneyLiveDisplay(draft[isForeignD ? 'usdCharged' : 'package']); });
         return;
       }
       if (el.dataset.search) {
@@ -9384,6 +9505,7 @@
       const bind = el.dataset.bind;
       if (!bind) return;
       if (el.dataset.fmt === 'money') {
+        if ((bind === 'draft.package' || bind === 'draft.usdCharged') && state.draft) state = { ...state, draft: { ...state.draft, priceFromItems: false } };
         const oldCursor = el.selectionStart == null ? el.value.length : el.selectionStart;
         const rawCharsBeforeCursor = el.value.slice(0, oldCursor).replace(/[^\d.]/g, '').length;
         applyBind(bind, sanitizeMoneyInput(el.value));
@@ -9434,6 +9556,19 @@
 
     app.addEventListener('change', (e) => {
       const el = e.target;
+      // Deliverable rows update state while typing without a re-render; when a field is left,
+      // re-render once so the amount gets its commas and every total on the form is current.
+      if (el.dataset.projIdx != null) {
+        setTimeout(() => {
+          const a = document.activeElement;
+          const sel = a && a.dataset ? (a.dataset.projIdx != null ? `[data-proj-idx="${a.dataset.projIdx}"][data-proj-field="${a.dataset.projField}"]` : (a.dataset.bind ? `[data-bind="${a.dataset.bind}"]` : '')) : '';
+          let pos = null; try { pos = a && a.selectionStart; } catch (err) { pos = null; }
+          render();
+          const n = sel ? app.querySelector(sel) : null;
+          if (n) { n.focus(); try { if (pos != null) n.setSelectionRange(pos, pos); } catch (err) { /* not a text field */ } }
+        }, 0);
+        return;
+      }
       if (el.dataset.actionChange === 'doc-client-pick') {
         const id = el.value;
         if (id) {
@@ -9537,7 +9672,7 @@
         // Foreign General Project: totals stay in PHP (= the PHP actually received); the $ charged is stored as a note only.
         const fixTier = isRealEstate && !d.packageTier ? { packageTier: 'custom' } : {};
         const fixPaidDate = isAddMode && paidAmount > 0 && !d.paidDate ? { paidDate: TODAY_STR } : {};
-        const cleaned = { ...d, ...fixTier, ...fixPaidDate, package: isForeignGP ? paidAmount : (packageAmount + addonsTotal), paid: paidAmount, usdCharged: Number(d.usdCharged) || 0, projectTypeOther: isOthersType(d.projectType) ? String(d.projectTypeOther || '').trim() : '', ...(reconciledPayments ? { payments: reconciledPayments } : {}), ...(isEditOnlyGP && isAddMode ? { date: TODAY_STR } : {}) };
+        const cleaned = { ...d, ...fixTier, ...fixPaidDate, package: isForeignGP ? paidAmount : (packageAmount + addonsTotal), paid: paidAmount, usdCharged: Number(d.usdCharged) || 0, projectTypeOther: isOthersType(d.projectType) ? String(d.projectTypeOther || '').trim() : '', ...(Array.isArray(d.projectItems) ? { projectItems: deliverablesOf(d).filter(it => String(it.name || '').trim() || it.amount !== '').map(it => ({ name: String(it.name || '').trim(), amount: it.amount, ...(it.text ? { text: it.text } : {}) })) } : {}), ...(reconciledPayments ? { payments: reconciledPayments } : {}), ...(isEditOnlyGP && isAddMode ? { date: TODAY_STR } : {}) };
         setState(s => {
           const name = (cleaned.client || '').trim();
           const hasClient = name && s.clients.some(c => c.name.trim().toLowerCase() === name.toLowerCase());
