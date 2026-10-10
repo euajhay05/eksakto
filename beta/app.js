@@ -925,6 +925,7 @@
     "sm.ptype": "Klase ng project",
     "sm.specify": "Ano ito (optional)",
     "sm.specify_ph": "hal. Christening, Graduation, Baby shower",
+    "sm.specify_hint": "Idadagdag ito sa listahan para sa susunod.",
     "sm.deliverables": "Mga project o deliverable",
     "sm.reel_ph": "hal. Reel #{n}",
     "sm.no_projects": "Wala pang project. Mag add sa baba. Ito ang magiging items sa invoice.",
@@ -962,8 +963,6 @@
     "sm.total_remaining": "Total ({amount}) · Natitirang balance",
     "sm.total_project": "Total ng project",
     "sm.remaining": "Natitirang balance",
-    "sm.script_status": "Status ng script",
-    "sm.script_client": "Ang client ang magbibigay ng script sa package na ito.",
     "sm.notes_ph": "Notes, hal. dalawang camera at may drone",
     "sm.billing_btn": "Gumawa ng {doc} galing sa shoot na ito",
     "sm.billing_hint": "Kukunin ang client at details. Ilagay ang due date at QR sa Documents.",
@@ -2156,6 +2155,7 @@
     "sm.ptype": "Project type",
     "sm.specify": "Please specify (optional)",
     "sm.specify_ph": "e.g. Christening, Graduation, Baby shower",
+    "sm.specify_hint": "This will be added to the list for next time.",
     "sm.deliverables": "Projects or deliverables",
     "sm.reel_ph": "e.g. Reel #{n}",
     "sm.no_projects": "No projects yet; add one below. These become the invoice line items.",
@@ -2193,8 +2193,6 @@
     "sm.total_remaining": "Total ({amount}) · Remaining balance",
     "sm.total_project": "Total project amount",
     "sm.remaining": "Remaining balance",
-    "sm.script_status": "Script status",
-    "sm.script_client": "The client provides the script for this package.",
     "sm.notes_ph": "Notes, e.g. two cameras and a drone",
     "sm.billing_btn": "Create {doc} from this shoot",
     "sm.billing_hint": "Pulls in the client and details. Add the due date and QR in Documents.",
@@ -2637,13 +2635,13 @@
       get label() { return t('preset.video'); }, get tagline() { return t('preset.video_tag'); },
       packages: [{ value: 'pk_v1', get name() { return t('pkg.highlights'); }, price: 15000 }, { value: 'pk_v2', get name() { return t('pkg.sde'); }, price: 30000 }, { value: 'pk_v3', get name() { return t('pkg.full'); }, price: 45000 }],
       addons: [{ key: 'ad_v1', get label() { return t('addon.raw'); }, price: 3000, flat: true }, { key: 'ad_v2', get label() { return t('addon.drone'); }, price: 5000, flat: true }, { key: 'ad_v3', get label() { return t('addon.hour'); }, price: 2000, flat: false }],
-      projectTypes: ['Wedding', 'Prenup', 'Debut', 'Event', 'Corporate', 'Music Video', 'Others'],
+      projectTypes: ['Wedding', 'Prenup', 'Debut', 'Birthday', 'Event', 'Corporate', 'Music Video', 'Real Estate', 'Others'],
     },
     photo: {
       get label() { return t('preset.photo'); }, get tagline() { return t('preset.photo_tag'); },
       packages: [{ value: 'pk_p1', get name() { return t('pkg.mini'); }, price: 5000 }, { value: 'pk_p2', get name() { return t('pkg.half'); }, price: 12000 }, { value: 'pk_p3', get name() { return t('pkg.whole'); }, price: 20000 }],
       addons: [{ key: 'ad_p1', get label() { return t('addon.photos'); }, price: 1000, flat: false }, { key: 'ad_p2', get label() { return t('addon.album'); }, price: 6000, flat: true }, { key: 'ad_p3', get label() { return t('addon.hour'); }, price: 1500, flat: false }],
-      projectTypes: ['Wedding', 'Prenup', 'Portrait', 'Family', 'Product', 'Event', 'Others'],
+      projectTypes: ['Wedding', 'Prenup', 'Portrait', 'Family', 'Product', 'Event', 'Birthday', 'Others'],
     },
   };
   // Older versions kept one free text "payment details" box plus one QR. Turn that into
@@ -6164,7 +6162,6 @@
     const projectItems = Array.isArray(d.projectItems) ? d.projectItems : [];
     const liveTiers = getLiveTiers();
     const isCustomPackage = isRealEstate && (!d.packageTier || d.packageTier === 'custom');
-    const isScriptedShootType = isRealEstate && d.packageTier !== 'basic' && d.packageTier !== 'standard';
     const draftPackageAmount = (!isRealEstate || (d.packageTier || 'custom') === 'custom')
       ? (Number(d.package) || 0)
       : ((liveTiers.find(tt => tt.value === d.packageTier) || {}).price || 0);
@@ -6359,17 +6356,13 @@
               <div style="font-size:15px;font-weight:800;color:oklch(0.62 0.17 45)">${draftBalanceLabel}</div>
             </div>
           </div>` : '';
-    const scriptBlock = isRealEstate && isScriptedShootType ? `
-          <div class="field"><label>${t('sm.script_status')}</label>
-            <select data-bind="draft.scriptStatus">${Object.keys(SCRIPT_STATUS_META).map(v => `<option value="${v}" ${d.scriptStatus === v ? 'selected' : ''}>${esc(dl(v))}</option>`).join('')}</select>
-          </div>` : '';
-    const scriptNoteBlock = isRealEstate && !isScriptedShootType ? `<div style="background:oklch(0.92 0.06 150 / 0.4);border-radius:9px;padding:10px 12px;font-size:12.5px;color:oklch(0.4 0.13 150)">${t('sm.script_client')}</div>` : '';
+    // Script status is no longer shown or edited (stored scriptStatus on old shoots is kept as is).
     const billingBlock = isEdit ? `
           <div style="border-top:1px solid var(--border3);margin-top:6px;padding-top:14px">
             <button type="button" data-action="shoot-create-billing" style="all:unset;cursor:pointer;display:block;text-align:center;box-sizing:border-box;width:100%;padding:11px;border-radius:10px;border:1.5px solid oklch(0.5 0.13 150);background:oklch(0.95 0.03 150);color:oklch(0.32 0.13 150);font-size:13px;font-weight:700">${t('sm.billing_btn', { doc: isForeign ? t('docs.invoice') : t('docs.soa') })}</button>
             <div style="font-size:11px;color:oklch(0.5 0.015 150);margin-top:5px;text-align:center;line-height:1.45">${t('sm.billing_hint')}</div>
           </div>` : '';
-    if (isPhoneLayout()) return shootPhoneForm({ d, isEdit, isRealEstate, isGeneral, isForeign, isEditOnly, projectItems, liveTiers, draftGrandTotal, draftPaidAmount, addonsTotal, statusOptions, shootDateDisplayLabel, deadlineDisplayLabel, timeDisplayLabel, datePop, timePop, deadlinePop, paidDateBlock, paidQuickBlock, foreignBlock, addonsBlock, termsBlock, simpleTotalBlock, scriptBlock, scriptNoteBlock, billingBlock });
+    if (isPhoneLayout()) return shootPhoneForm({ d, isEdit, isRealEstate, isGeneral, isForeign, isEditOnly, projectItems, liveTiers, draftGrandTotal, draftPaidAmount, addonsTotal, statusOptions, shootDateDisplayLabel, deadlineDisplayLabel, timeDisplayLabel, datePop, timePop, deadlinePop, paidDateBlock, paidQuickBlock, foreignBlock, addonsBlock, termsBlock, simpleTotalBlock,  billingBlock });
     return `
     <div class="modal-backdrop" data-action="modal-backdrop-close" data-which="shoot">
       <form class="modal-box" style="width:460px" data-stop data-action="save-shoot">
@@ -6393,7 +6386,7 @@
         <div class="modal-fields">
           <div class="field"><label>${t('sm.name')}</label><input type="text" value="${esc(d.client)}" data-bind="draft.client" data-fmt="autocomplete" placeholder="${esc(t('sm.name_ph'))}" required autocomplete="off"/>
           </div>
-          ${projectTypes().length ? `<div class="field"><label>${t('sm.ptype')}</label><select data-bind="draft.projectType"><option value="">${t('common.pick')}</option>${projectTypes().concat(d.projectType && !projectTypes().includes(d.projectType) ? [d.projectType] : []).map(tt => `<option value="${esc(tt)}" ${d.projectType === tt ? 'selected' : ''}>${esc(dl(tt))}</option>`).join('')}</select></div>${isOthersType(d.projectType) ? `<div class="field"><label>${t('sm.specify_label')} <span style="font-weight:500;opacity:.6">${t('common.optional')}</span></label><input type="text" value="${esc(d.projectTypeOther || '')}" data-bind="draft.projectTypeOther" placeholder="${esc(t('sm.specify_ph'))}" maxlength="60"/></div>` : ''}` : ''}
+          ${projectTypes().length ? `<div class="field"><label>${t('sm.ptype')}</label><select data-bind="draft.projectType"><option value="">${t('common.pick')}</option>${projectTypes().concat(d.projectType && !projectTypes().includes(d.projectType) ? [d.projectType] : []).map(tt => `<option value="${esc(tt)}" ${d.projectType === tt ? 'selected' : ''}>${esc(dl(tt))}</option>`).join('')}</select></div>${isOthersType(d.projectType) ? `<div class="field"><label>${t('sm.specify_label')} <span style="font-weight:500;opacity:.6">${t('common.optional')}</span></label><input type="text" value="${esc(d.projectTypeOther || '')}" data-bind="draft.projectTypeOther" placeholder="${esc(t('sm.specify_ph'))}" maxlength="60"/></div><div style="font-size:11.5px;color:oklch(0.5 0.015 150);margin:-4px 0 4px 2px;line-height:1.45">${t('sm.specify_hint')}</div>` : ''}` : ''}
           ${isEditOnly ? `
           <div class="field"><label>${t('sm.deliverables')}</label>
             ${projectItems.length ? projectItems.map((p, i) => `
@@ -6453,8 +6446,6 @@
           ${addonsBlock}
           ${termsBlock}
           ${simpleTotalBlock}
-          ${scriptBlock}
-          ${scriptNoteBlock}
           <div class="field"><input type="text" value="${esc(d.notes)}" data-bind="draft.notes" placeholder="${esc(t('sm.notes_ph'))}"/></div>
           ${billingBlock}
         </div>
@@ -6532,7 +6523,7 @@
         <div class="pf-card pf-list">
           ${v.isEditOnly ? '' : `<label class="pf-it"><span>${t('sm.location_label')}</span><input type="text" value="${esc(d.location)}" data-bind="draft.location" placeholder="${esc(t('pf.add'))}"/></label>`}
           ${ptypes.length ? `<label class="pf-it"><span>${t('sm.ptype')}</span><select data-bind="draft.projectType"><option value="">${t('common.pick')}</option>${ptypes.concat(d.projectType && !ptypes.includes(d.projectType) ? [d.projectType] : []).map(tt => `<option value="${esc(tt)}" ${d.projectType === tt ? 'selected' : ''}>${esc(dl(tt))}</option>`).join('')}</select></label>
-          ${isOthersType(d.projectType) ? `<label class="pf-it"><span>${t('sm.specify_label')}</span><input type="text" value="${esc(d.projectTypeOther || '')}" data-bind="draft.projectTypeOther" placeholder="${esc(t('sm.specify_ph'))}" maxlength="60"/></label>` : ''}` : ''}
+          ${isOthersType(d.projectType) ? `<label class="pf-it"><span>${t('sm.specify_label')}</span><input type="text" value="${esc(d.projectTypeOther || '')}" data-bind="draft.projectTypeOther" placeholder="${esc(t('sm.specify_ph'))}" maxlength="60"/></label><div class="pf-it pf-it-sub"><span>${t('sm.specify_hint')}</span></div>` : ''}` : ''}
           <label class="pf-it"><span>${t('cl.col_status')}</span><select class="pf-status" data-bind="draft.status" data-special="shootStatus">${v.statusOptions.map(sm => `<option value="${sm.value}" ${d.status === sm.value ? 'selected' : ''}>${sm.label}</option>`).join('')}</select></label>
           <div class="pf-it-wrap"><button type="button" class="pf-it" data-action="deadline-picker-toggle"><span>${t('pf.deadline')}</span><b class="${d.deadline ? '' : 'ph'}">${d.deadline ? v.deadlineDisplayLabel : t('pf.none_yet')} <i class="pf-chev">${PF_CHEV}</i></b></button>${v.deadlinePop}</div>
           ${d.deadline ? `<div class="pf-it pf-it-sub"><span>${t('sm.deadline_hint')}</span><button type="button" class="pf-link" data-action="deadline-clear">${t('common.clear')}</button></div>` : ''}
@@ -6547,8 +6538,6 @@
         ${v.termsBlock ? `<div class="pf-extra pf-plain">${v.termsBlock}</div>` : ''}
         ${v.simpleTotalBlock ? `<div class="pf-extra pf-plain">${v.simpleTotalBlock}</div>` : ''}
         ${v.addonsBlock ? `<div class="pf-extra pf-plain">${v.addonsBlock}</div>` : ''}
-        ${v.scriptBlock ? `<div class="pf-card pf-extra">${v.scriptBlock}</div>` : ''}
-        ${v.scriptNoteBlock ? `<div class="pf-extra pf-plain">${v.scriptNoteBlock}</div>` : ''}
         ${v.billingBlock ? `<div class="pf-extra pf-plain">${v.billingBlock}</div>` : ''}
         ${v.isEdit ? `<button type="button" class="pf-delete" data-action="shoot-delete">${t('common.delete')}</button>` : ''}`;
     }
@@ -9497,13 +9486,22 @@
             ? [...s.clients, { id: 'c' + Date.now(), name, phone: '', email: '', leadStatus: 'Booked', followUpDate: '', notes: '' }]
             : s.clients;
           if (cleaned.status === 'posted') clients = promoteClientToCompleted(clients, name);
+          // "Others" with a specified type: add that text to the project type list (before Others) for next time.
+          const otherTxt = isOthersType(cleaned.projectType) ? String(cleaned.projectTypeOther || '').trim() : '';
+          const curTypes = Array.isArray(s.settings.projectTypes) ? s.settings.projectTypes : [];
+          let settingsPatch = null;
+          if (otherTxt && !isOthersType(otherTxt) && !curTypes.some(x => String(x || '').trim().toLowerCase() === otherTxt.toLowerCase())) {
+            const oi = curTypes.findIndex(x => isOthersType(x));
+            const nextTypes = oi >= 0 ? [...curTypes.slice(0, oi), otherTxt, ...curTypes.slice(oi)] : [...curTypes, otherTxt];
+            settingsPatch = { ...s.settings, projectTypes: nextTypes };
+          }
           const newId = 'sh' + Date.now();
           const shoots = s.modal.mode === 'add'
             ? [...s.shoots, { ...cleaned, id: newId }]
             : s.shoots.map(sh => sh.id === cleaned.id ? cleaned : sh);
           // Phone: confirm a new shoot with the bottom success sheet.
           const savedSheet = s.modal.mode === 'add' && isPhoneLayout() ? { kind: 'shoot', id: newId, client: name, date: cleaned.date || '', tier: cleaned.shootType === 'Real Estate' ? (cleaned.packageTier || 'custom') : '', total: Number(cleaned.package) || 0, paid: Number(cleaned.paid) || 0 } : null;
-          return { shoots, modal: null, draft: null, shootConfirmCloseOpen: false, pfStep: 'quick', ...(savedSheet ? { savedSheet } : {}), ...(clients !== s.clients ? { clients } : {}) };
+          return { shoots, modal: null, draft: null, shootConfirmCloseOpen: false, pfStep: 'quick', ...(savedSheet ? { savedSheet } : {}), ...(clients !== s.clients ? { clients } : {}), ...(settingsPatch ? { settings: settingsPatch } : {}) };
         });
       } else if (action === 'save-telegram-expense') {
         const d = state.expenseDraft;
