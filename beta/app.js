@@ -3315,6 +3315,54 @@
     });
   }
 
+  // v18 data repair for the v17 "every edit adds an Adjustment" bug. Conservative on purpose:
+  // a shoot is changed only when every automatic negative adjustment on it can be explained.
+  //  * bug adjustment = id "sp<time>adj", negative amount, label Adjustment (any language);
+  //  * walking the log in time order, each one must exactly cancel an earlier real payment
+  //    (same amount, still counted); if, after that adjustment, the same payment was logged
+  //    again (same amount, date and label), that copy is the re-log and is removed too;
+  //  * the stored paid total must equal the log sum (the state the bug leaves behind).
+  // Anything that does not fit leaves the shoot untouched. The old log is kept in
+  // localStorage (eksakto_repair_v18) so a repair can be undone by hand.
+  function repairAdjustmentBug() {
+    const isBugAdj = p => /^sp\d+adj$/.test(String(p.id || '')) && (Number(p.amount) || 0) < 0 && dataLabelId(p.label) === 'ms.adjustment';
+    const tsOf = p => { const m = /^(?:sp|p)?(\d{10,})/.exec(String(p.id || '')); return m ? Number(m[1]) : 0; };
+    const sum = arr => arr.reduce((a, p) => a + (Number(p.amount) || 0), 0);
+    const backup = {};
+    let changed = false;
+    const shoots = state.shoots.map(sh => {
+      const log = shootPaymentsOf(sh);
+      if (!log.some(isBugAdj)) return sh;
+      if (Math.abs((Number(sh.paid) || 0) - sum(log)) >= 0.005) return sh;
+      const ordered = log.map((p, i) => ({ p, i })).sort((a, b) => (tsOf(a.p) - tsOf(b.p)) || (a.i - b.i));
+      const drop = new Set();
+      const cancelled = []; // real payments currently cancelled by a bug adjustment, waiting for a possible re-log
+      let ok = true;
+      for (const { p } of ordered) {
+        if (isBugAdj(p)) {
+          const amt = -(Number(p.amount) || 0);
+          // the payment it cancelled: latest earlier real payment of that amount that still counts
+          const target = ordered.map(x => x.p).filter(q => !isBugAdj(q) && !drop.has(q) && !cancelled.includes(q) && tsOf(q) <= tsOf(p) && Math.abs((Number(q.amount) || 0) - amt) < 0.005).pop();
+          if (!target) { ok = false; break; }
+          cancelled.push(target); drop.add(p);
+        } else {
+          const twin = cancelled.find(q => Math.abs((Number(q.amount) || 0) - (Number(p.amount) || 0)) < 0.005 && q.date === p.date && q.label === p.label);
+          if (twin) { drop.add(p); cancelled.splice(cancelled.indexOf(twin), 1); }
+        }
+      }
+      if (!ok || !drop.size) return sh;
+      const kept = log.filter(p => !drop.has(p));
+      if (kept.some(isBugAdj)) return sh;
+      backup[sh.id] = { paid: sh.paid, payments: log };
+      changed = true;
+      return { ...sh, payments: kept, paid: sum(kept) };
+    });
+    if (!changed) return false;
+    try { localStorage.setItem('eksakto_repair_v18', JSON.stringify({ at: new Date().toISOString(), shoots: backup })); } catch (e) { /* storage blocked */ }
+    state = { ...state, shoots };
+    return true;
+  }
+
   // --- save indicator (Saved / Save failed) ---
   let saveIndicatorTimer = null;
   function ensureSaveIndicatorEl() {
@@ -7689,6 +7737,7 @@
       shootDateCalYear: calBase.getFullYear(), shootDateCalMonth: calBase.getMonth(),
       shootDeadlineCalYear: calBase.getFullYear(), shootDeadlineCalMonth: calBase.getMonth(),
       draftDateLocked: !!lockDate, shootLocOpen: false, pfStep: 'quick', pfClientEdit: true, pfAmountEdit: false,
+      draftPaidAtOpen: null,
       draft: { id: null, client: '', location: '', date: presetDate || '', deadline: '', time: '', status: 'idea', scriptStatus: 'Not Started', shootType: 'Real Estate', serviceType: 'shoot', currency: 'PHP', notes: '', packageTier: '', package: '', paid: '', paidDate: '', addons: {} },
     });
     shootDraftSnapshot = JSON.stringify(state.draft);
@@ -7714,7 +7763,8 @@
       shootDateCalYear: calBase.getFullYear(), shootDateCalMonth: calBase.getMonth(),
       shootDeadlineCalYear: deadlineCalBase.getFullYear(), shootDeadlineCalMonth: deadlineCalBase.getMonth(),
       draftDateLocked: false, shootLocOpen: false, pfStep: 'quick', pfClientEdit: false, pfAmountEdit: false,
-      draft: { packageTier: 'custom', shootType: 'General Project', serviceType: 'shoot', addons: {}, ...sh, package: basePackage },
+      draft: { packageTier: 'custom', shootType: 'General Project', serviceType: 'shoot', addons: {}, ...sh, package: basePackage, paid: shootPaidTotal(sh) },
+      draftPaidAtOpen: shootPaidTotal(sh),
     });
     shootDraftSnapshot = JSON.stringify(state.draft);
     if (sh.currency === 'USD') refreshUsdRate();
@@ -9456,20 +9506,29 @@
         // If the shoot has a log and the edited paid total differs from the log sum, record
         // the difference as a dated entry (today) so the edit is kept AND the log stays
         // consistent - instead of silently discarding the edit. No log means paid is the source.
+        // The payment log of the shoot as it is saved NOW (not the copy taken when the form opened),
+        // so a payment logged meanwhile (another tab, the payment sheet) is never dropped.
+        const isEditSave = !!(state.modal && state.modal.mode === 'edit');
+        const storedShoot = isEditSave ? state.shoots.find(x => x.id === d.id) : null;
+        const logPayments = storedShoot ? shootPaymentsOf(storedShoot) : (Array.isArray(d.payments) ? d.payments : []);
         let paidAmount;
         let reconciledPayments = null;
-        if (Array.isArray(d.payments) && d.payments.length) {
-          const logSum = d.payments.reduce((a, p) => a + (Number(p.amount) || 0), 0);
-          const editedPaid = Number(d.paid) || 0;
+        const editedPaid = Number(sanitizeMoneyInput(d.paid)) || 0;
+        if (logPayments.length) {
+          const logSum = logPayments.reduce((a, p) => a + (Number(p.amount) || 0), 0);
+          // Only an explicit change to the paid amount in this form reconciles. An edit that leaves the
+          // paid field as it was (deadline, date, notes...) keeps the log exactly as it is.
+          const touchedPaid = state.draftPaidAtOpen == null || Math.abs(editedPaid - Number(state.draftPaidAtOpen)) >= 0.005;
           const diff = editedPaid - logSum;
-          if (Math.abs(diff) >= 0.005) {
-            reconciledPayments = [...d.payments, { id: 'sp' + Date.now() + 'adj', amount: diff, date: TODAY_STR, label: diff > 0 ? t('ms.balance_received') : t('ms.adjustment') }];
+          if (touchedPaid && Math.abs(diff) >= 0.005) {
+            reconciledPayments = [...logPayments, { id: 'sp' + Date.now() + 'adj', amount: diff, date: TODAY_STR, label: diff > 0 ? t('ms.balance_received') : t('ms.adjustment') }];
             paidAmount = editedPaid;
           } else {
+            reconciledPayments = storedShoot ? logPayments : null;
             paidAmount = logSum;
           }
         } else {
-          paidAmount = Number(d.paid) || 0;
+          paidAmount = editedPaid;
         }
         // Edit-only General Projects have no shoot date — a NEW one is stamped with today (the
         // day it was created), and its date field is hidden in the form.
@@ -9709,10 +9768,21 @@
     setTimeout(recheckLicense, 1500);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { recheckLicense(); refreshToday(); } });
     window.addEventListener('pageshow', () => refreshToday());
+    // Another tab of the app saved: take its data, so this tab never saves an old copy over it
+    // (that used to drop payments logged in the other tab).
+    window.addEventListener('storage', (e) => {
+      if (e.key !== DATA_KEY || !e.newValue) return;
+      const fresh = readLocalData();
+      if (!fresh) return;
+      applyPersistedData(fresh);
+      const a = document.activeElement;
+      if (!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) render();
+    });
     window.addEventListener('focus', () => refreshToday());
     const saved = readLocalData();
     if (saved) {
       applyPersistedData(saved);
+      if (repairAdjustmentBug()) persist();
       // Self-heal: clients whose linked shoot(s) are already Completed but who are
       // still stuck in an earlier leads-pipeline status get bumped to "Client" once.
       if (state.shoots.length && state.clients.length) {
